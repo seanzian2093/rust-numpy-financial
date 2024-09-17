@@ -15,4 +15,8 @@ fn main() {
     // pmt
     let pmt = Payment::from_tuple((0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End));
     println!("{:#?}'s pmt is {}", pmt, pmt.get());
+
+    // nper
+    let nper = NumberPeriod::from_tuple((0.075, -2000.0, 0.0, 100000.0, WhenType::End));
+    println!("{:#?}'s nper is {:?}", nper, nper.get());
 }

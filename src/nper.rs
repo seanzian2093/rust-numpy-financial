@@ -11,7 +11,7 @@ pub struct NumberPeriod {
 }
 
 impl NumberPeriod {
-    fn from_tuple(tup: (f64, f64, f64, f64, WhenType)) -> Self {
+    pub fn from_tuple(tup: (f64, f64, f64, f64, WhenType)) -> Self {
         NumberPeriod {
             rate: tup.0,
             pmt: tup.1,
