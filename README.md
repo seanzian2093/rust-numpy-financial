@@ -18,7 +18,7 @@ A financial crate mimicking `numpy_financial` in Python.
 ## example
 
 ```rust
-use rfinancial;
+use rfinancial::*;
 let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
 println!("{:#?}'s fv is {}", fv, fv.get());
 ```
