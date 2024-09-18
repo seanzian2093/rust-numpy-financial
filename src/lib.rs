@@ -9,10 +9,10 @@
 //! * ipmt - interest portion of a payment
 //! * ppmt - payment against loan principal
 //! * pv - present value
+//! * rate - rate of interest per period
 
 //! ## To Be Added
 
-//! * rate - rate of interest per period
 //! * irr - internal rate of return
 //! * npv - net present value of a cash flow series
 //! * mirr - modified internal rate of return
@@ -42,6 +42,7 @@ mod nper;
 mod pmt;
 mod ppmt;
 mod pv;
+mod rate;
 mod util;
 
 pub use crate::fv::FutureValue;
@@ -49,6 +50,6 @@ pub use crate::ipmt::InterestPayment;
 pub use crate::nper::NumberPeriod;
 pub use crate::pmt::Payment;
 pub use crate::ppmt::PrincipalPayment;
-pub use crate::util::WhenType;
-
 pub use crate::pv::PresentValue;
+pub use crate::rate::Rate;
+pub use crate::util::WhenType;
