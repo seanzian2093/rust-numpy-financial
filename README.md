@@ -9,10 +9,10 @@ A financial crate mimicking `numpy_financial` in Python.
 * fv - future value
 * pmt - payment against loan principal plus interest
 * nper - number of periodic payments
+* ipmt - interest portion of a payment
 
 ### To be Added
 
-* ipmt - interest portion of a payment
 * ppmt - payment against loan principle
 * pv - present value
 * rate - rate of interest per period
