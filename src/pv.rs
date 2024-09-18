@@ -1,40 +1,39 @@
 use crate::util::{float_close, WhenType, ATOL, RTOL};
-/// # Compute the future value.
+/// # Compute the present value.
 
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
 /// * `nper` : number of compounding periods
 /// * `pmt` : payment in each period
-/// * `pv` : present value
+/// * `fv` : future value
 /// * `when` : when payments are due [`WhenType`]. Defaults to `When::End`
 ///
 /// ## Return:
-/// * `fv`: the value at the end of the `nper` periods, which is used in other modules as parameter
+/// * `pv`: the present value of a series of payments, which is used in other modules as parameter
 ///
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
-/// let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
-/// println!("{:#?}'s fv is {}", fv, fv.get());
+/// let pv = PresentValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
+/// println!("{:#?}'s pv is {}", pv, pv.get());
 /// ```
-///
 #[derive(Debug)]
-pub struct FutureValue {
+pub struct PresentValue {
     rate: f64,
     nper: u32,
     pmt: f64,
-    pv: f64,
+    fv: f64,
     when: WhenType,
 }
 
-impl FutureValue {
-    /// Instantiate a `FutureValue` instance from a tuple of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
+impl PresentValue {
+    /// Instantiate a `PresentValue` instance from a tuple of (`rate`, `nper`, `pmt`, `fv` and `when`) in said order
     pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Self {
-        FutureValue {
+        PresentValue {
             rate: tup.0,
             nper: tup.1,
             pmt: tup.2,
-            pv: tup.3,
+            fv: tup.3,
             when: tup.4,
         }
     }
@@ -47,18 +46,16 @@ impl FutureValue {
         fv + pv + pmt*nper = 0
         */
         if self.rate != 0.0 {
-            let tmp = (1.0 + self.rate).powf(self.nper as f64);
-            let pv_future = self.pv * tmp;
+            let temp = (1.0 + self.rate).powf(self.nper as f64);
             let when_f64 = self.when.clone() as u8 as f64;
-            let pmt_future = self.pmt * (1.0 + self.rate * when_f64) / self.rate * (tmp - 1.0);
-
-            -pv_future - pmt_future
+            let fact = (1.0 + self.rate * when_f64) * (temp - 1.0) / self.rate;
+            -(self.fv + self.pmt * fact) / temp
         } else {
-            -self.pv - self.pmt * self.nper as f64
+            -self.fv - self.pmt * self.nper as f64
         }
     }
 
-    /// Get the future value from an instance of `FutureValue`
+    /// Get the future value from an instance of `PresentValue`
     pub fn get(&self) -> f64 {
         self.fv()
     }
@@ -68,24 +65,24 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_fv_with_begin() {
-        let rate = 0.075;
+    fn test_pv_with_begin() {
+        let rate = 0.07;
         let nper = 20;
-        let pmt = -2000.0;
-        let pv = 0.0;
+        let pmt = 12000.0;
+        let fv = 0.0;
         let when = WhenType::Begin;
 
-        let fv = FutureValue {
+        let pv = PresentValue {
             rate,
             nper,
             pmt,
-            pv,
+            fv,
             when,
         };
-        // npf.fv(0.075, 20, -2000, 0, 1),
-        // 93105.064874
-        let res = fv.get();
-        let tgt = 93105.064874;
+        // npf.pv(0.07, 20, 12000, 0, 'begin')
+        // -136027.14291242755
+        let res = pv.get();
+        let tgt = -136027.14291242755;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
             "{:#?} v.s. {:#?}",
@@ -95,24 +92,24 @@ mod test {
     }
 
     #[test]
-    fn test_fv_with_end() {
-        let rate = 0.075;
+    fn test_pv_with_end() {
+        let rate = 0.07;
         let nper = 20;
-        let pmt = -2000.0;
-        let pv = 0.0;
+        let pmt = 12000.0;
+        let fv = 0.0;
         let when = WhenType::End;
 
-        let fv = FutureValue {
+        let pv = PresentValue {
             rate,
             nper,
             pmt,
-            pv,
+            fv,
             when,
         };
-        // npf.fv(0.075, 20, -2000, 0, 0),
-        // 86609.362673042924,
-        let res = fv.get();
-        let tgt = 86609.362673042924;
+        // npf.pv(0.07, 20, 12000, 0)
+        // -127128.17
+        let res = pv.get();
+        let tgt = -127128.17094619398;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
             "{:#?} v.s. {:#?}",
@@ -122,22 +119,24 @@ mod test {
     }
 
     #[test]
-    fn test_fv_zero_rate() {
+    fn test_pv_zero_rate() {
         let rate = 0.0;
         let nper = 20;
-        let pmt = -100.0;
-        let pv = 0.0;
+        let pmt = 12000.0;
+        let fv = 0.0;
         let when = WhenType::End;
 
-        let fv = FutureValue {
+        let pv = PresentValue {
             rate,
             nper,
             pmt,
-            pv,
+            fv,
             when,
         };
-        let res = fv.get();
-        let tgt = 2000.0;
+        // npf.pv(0.07, 20, 12000, 0)
+        // -240000.0
+        let res = pv.get();
+        let tgt = -240000.0;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
             "{:#?} v.s. {:#?}",

@@ -4,23 +4,23 @@ A financial crate mimicking `numpy_financial` in Python.
 
 ## Module
 
-### Initial working version
+### Initial Working Version
 
 * fv - future value
 * pmt - payment against loan principal plus interest
 * nper - number of periodic payments
 * ipmt - interest portion of a payment
 * ppmt - payment against loan principal
-
-### To be Added
-
 * pv - present value
+
+### To Be Added
+
 * rate - rate of interest per period
 * irr - internal rate of return
 * npv - net present value of a cash flow series
 * mirr - modified internal rate of return
 
-## example
+## Example
 
 ```rust
 use rfinancial::*;

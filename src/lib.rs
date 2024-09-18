@@ -1,21 +1,25 @@
 //! # rfinancial
 //! `rfinancial` is a financial crate mimicking `numpy_financial` in Python.
 //!
-//! ## Initial working version
+//! ## Initial Working Version
 
 //! * fv - future value
 //! * pmt - payment against loan principal plus interest
 //! * nper - number of periodic payments
 //! * ipmt - interest portion of a payment
-
-//! ## To be Added
-
 //! * ppmt - payment against loan principal
 //! * pv - present value
+
+//! ## To Be Added
+
 //! * rate - rate of interest per period
 //! * irr - internal rate of return
 //! * npv - net present value of a cash flow series
 //! * mirr - modified internal rate of return
+
+//! ## Tests
+//! * All test cases are tested against `numpy_financial`'s result with some exceptions
+//! * `numpy_financial` has some its own issues
 
 //! ## Example
 //! ```rust
@@ -30,13 +34,14 @@
 //!
 //! ## Contribution
 //! * Use the crate and feedback
-//! * Pull request though the repository
+//! * Submit pull request or issues though the GitHub repository
 
 mod fv;
 mod ipmt;
 mod nper;
 mod pmt;
 mod ppmt;
+mod pv;
 mod util;
 
 pub use crate::fv::FutureValue;
@@ -45,3 +50,5 @@ pub use crate::nper::NumberPeriod;
 pub use crate::pmt::Payment;
 pub use crate::ppmt::PrincipalPayment;
 pub use crate::util::WhenType;
+
+pub use crate::pv::PresentValue;
