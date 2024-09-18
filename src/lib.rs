@@ -10,7 +10,7 @@
 
 //! ## To be Added
 
-//! * ppmt - payment against loan principle
+//! * ppmt - payment against loan principal
 //! * pv - present value
 //! * rate - rate of interest per period
 //! * irr - internal rate of return
@@ -36,10 +36,12 @@ mod fv;
 mod ipmt;
 mod nper;
 mod pmt;
+mod ppmt;
 mod util;
 
 pub use crate::fv::FutureValue;
 pub use crate::ipmt::InterestPayment;
 pub use crate::nper::NumberPeriod;
 pub use crate::pmt::Payment;
+pub use crate::ppmt::PrincipalPayment;
 pub use crate::util::WhenType;

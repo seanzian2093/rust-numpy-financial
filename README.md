@@ -10,10 +10,10 @@ A financial crate mimicking `numpy_financial` in Python.
 * pmt - payment against loan principal plus interest
 * nper - number of periodic payments
 * ipmt - interest portion of a payment
+* ppmt - payment against loan principal
 
 ### To be Added
 
-* ppmt - payment against loan principle
 * pv - present value
 * rate - rate of interest per period
 * irr - internal rate of return

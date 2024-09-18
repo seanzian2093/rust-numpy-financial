@@ -53,7 +53,7 @@ impl InterestPayment {
         let total_pmt =
             Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when.clone())).get();
         // remaining balance
-        // only consider per > 1, i.e.g 1st payment
+        // only consider per > 1, i.e. starting from 1st payment
         if self.per >= 1 {
             let rbl = FutureValue::from_tuple((
                 self.rate,
@@ -80,8 +80,6 @@ impl InterestPayment {
         } else {
             None
         }
-
-        // when is Begin
     }
 
     /// Get the interet payment from an instance of `InterestPayment`
