@@ -1,6 +1,23 @@
-use std::f32::consts::LN_10;
-
 use crate::util::{float_close, WhenType, ATOL, RTOL};
+/// # Compute the number of periodic payments.
+
+/// ## Parameters
+/// * `rate` : an interest rate compounded once per period
+/// * `pmt` : payment in each period
+/// * `pv` : a present value
+/// * `fv` : a future value
+/// * `when` : when payments are due [`WhenType`]. Defaults to `When::End`
+///
+/// ## Return:
+/// * `nper`: the number of periodic payments
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let nper = NumberPeriod::from_tuple((0.075, -2000.0, 0.0, 100000.0, WhenType::End));
+/// println!("{:#?}'s nper is {:?}", nper, nper.get());
+/// ```
+///
 #[derive(Debug)]
 pub struct NumberPeriod {
     rate: f64,
@@ -11,6 +28,7 @@ pub struct NumberPeriod {
 }
 
 impl NumberPeriod {
+    /// Instantiate a `NumberPeriod` instance from a tuple of (`rate`, `pmt`, `pv`, `fv`, and `when`) in said order
     pub fn from_tuple(tup: (f64, f64, f64, f64, WhenType)) -> Self {
         NumberPeriod {
             rate: tup.0,
@@ -48,6 +66,7 @@ impl NumberPeriod {
         Some(((-self.fv + z) / (self.pv + z)).ln() / (1.0 + self.rate).ln())
     }
 
+    /// Get the number of periodic payments from an instance of `NumberPeriod`
     pub fn get(&self) -> Option<f64> {
         self.nper()
     }

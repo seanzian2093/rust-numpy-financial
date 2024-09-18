@@ -1,4 +1,23 @@
 use crate::util::{float_close, WhenType, ATOL, RTOL};
+/// # Compute the future value.
+
+/// ## Parameters
+/// * `rate` : an interest rate compounded once per period
+/// * `nper` : number of compounding periods
+/// * `pmt` : payment in each period
+/// * `pv` : a present value
+/// * `when` : when payments are due [`WhenType`]. Defaults to `When::End`
+///
+/// ## Return:
+/// * `fv`: the value at the end of the `nper` periods, which is used in other modules as parameter
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
+/// println!("{:#?}'s fv is {}", fv, fv.get());
+/// ```
+///
 #[derive(Debug)]
 pub struct FutureValue {
     rate: f64,
@@ -9,6 +28,7 @@ pub struct FutureValue {
 }
 
 impl FutureValue {
+    /// Instantiate a `FutureValue` instance from a tuple of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
     pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Self {
         FutureValue {
             rate: tup.0,
@@ -38,6 +58,7 @@ impl FutureValue {
         }
     }
 
+    /// Get the future value from an instance of `FutureValue`
     pub fn get(&self) -> f64 {
         self.fv()
     }

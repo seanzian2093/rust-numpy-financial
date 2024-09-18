@@ -8,6 +8,7 @@ pub fn float_close(lhs: f64, rhs: f64, rtol: f64, atol: f64) -> bool {
 }
 
 #[derive(Clone, Debug)]
+/// when payments are due
 pub enum WhenType {
     End = 0,
     Begin = 1,

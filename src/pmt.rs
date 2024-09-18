@@ -1,4 +1,22 @@
 use crate::util::{float_close, WhenType, ATOL, RTOL};
+/// # Compute the payment against loan principal plus interest
+
+/// ## Parameters
+/// * `rate` : an interest rate compounded once per period
+/// * `nper` : number of periodic payments
+/// * `pv` : a present value
+/// * `fv` : a future value
+/// * `when` : when payments are due [`WhenType`]. Defaults to `When::End`
+///
+/// ## Return:
+/// * `pmt`: payment in each period
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let pmt = Payment::from_tuple((0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End));
+/// println!("{:#?}'s pmt is {}", pmt, pmt.get());
+/// ```
 #[derive(Debug)]
 pub struct Payment {
     rate: f64,
@@ -9,6 +27,7 @@ pub struct Payment {
 }
 
 impl Payment {
+    /// Instantiate a `Payment` instance from a tuple of (`rate`, `nper`, `pv`, `fv` and `when`) in said order
     pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Self {
         Payment {
             rate: tup.0,
@@ -36,6 +55,7 @@ impl Payment {
             -(self.pv + self.fv) / self.nper as f64
         }
     }
+    /// Get the payment from an instance of `Payment`
     pub fn get(&self) -> f64 {
         self.pmt()
     }
