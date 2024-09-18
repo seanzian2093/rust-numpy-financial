@@ -9,7 +9,7 @@ use crate::util::{float_close, WhenType, ATOL, RTOL};
 /// * `when` : when payments are due [`WhenType`]. Defaults to `When::End`
 ///
 /// ## Return:
-/// * `nper`: the number of periodic payments
+/// * `nper`: the number of periodic payments or `None`
 ///
 /// ## Example
 /// ```rust

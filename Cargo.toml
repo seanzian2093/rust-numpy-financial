@@ -1,6 +1,6 @@
 [package]
 name = "rfinancial"
-version = "0.1.2"
+version = "0.1.3"
 edition = "2021"
 include = ["src/**/*", "Cargo.toml", "README.md"]
 homepage = "https://github.com/seanzian2093/rust-numpy-financial"
