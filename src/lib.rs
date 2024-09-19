@@ -11,11 +11,11 @@
 //! * pv - present value
 //! * rate - rate of interest per period
 //! * irr - internal rate of return
-
-//! ## To Be Added
-
 //! * npv - net present value of a cash flow series
 //! * mirr - modified internal rate of return
+
+//! ## To Be Added
+//! * amortization
 
 //! ## Tests
 //! * All test cases are tested against `numpy_financial`'s result with some exceptions
@@ -40,6 +40,7 @@
 mod fv;
 mod ipmt;
 mod irr;
+mod mirr;
 mod nper;
 mod npv;
 mod pmt;
@@ -51,6 +52,7 @@ mod util;
 pub use crate::fv::FutureValue;
 pub use crate::ipmt::InterestPayment;
 pub use crate::irr::InternalRateReturn;
+pub use crate::mirr::ModifiedIRR;
 pub use crate::nper::NumberPeriod;
 pub use crate::npv::NetPresentValue;
 pub use crate::pmt::Payment;
