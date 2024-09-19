@@ -14,10 +14,10 @@ A financial crate mimicking `numpy_financial` in Python.
 * pv - present value
 * rate - rate of interest per period
 * irr - internal rate of return
+* npv - net present value of a cash flow series
 
 ### To Be Added
 
-* npv - net present value of a cash flow series
 * mirr - modified internal rate of return
 
 ## Planned Improvements
@@ -72,6 +72,11 @@ println!("\n{:#?}'s rate is {:#?}", rate, rate.get());
 let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
 let irr = InternalRateReturn::from_vec(values);
 println!("\n{:#?}'s irr is {:#?}", irr, irr.get());
+
+// npv
+let tup = (vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0], 0.05);
+let npv = NetPresentValue::from_tuple(tup);
+println!("\n{:#?}'s npv is {:?}", npv, npv.get());
 ```
 
 ## Future Works
