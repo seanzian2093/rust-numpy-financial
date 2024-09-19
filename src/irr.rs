@@ -1,30 +1,34 @@
-//! # Compute the Internal Rate of Return (IRR).
-//! This is the "average" periodically compounded rate of return that gives a net present value of 0.0
-
-//! Parameters
-//! `values` : array_like, shape(N,)
-//! * input cash flows per time period
-//! * by convention, net "deposits" are negative and net "withdrawals" are positive
-//! * e.g., the first element of `values`, which represents the initial investment, is typically negative
-
-//! Return
-//! * `irr`: internal rate of return for periodic input `values`
-//!
-//! ## Example
-//! ```rust
-//! use rfinancial::*;
-//! let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
-//! let irr = InternalRateReturn::from_vec(values);
-//! println!("{:#?}'s irr is {:#?}", irr, irr.get());
-//! ```
 use crate::util::{float_close, ATOL, RTOL};
+/// # Compute the Internal Rate of Return (IRR)
+/// This is the "average" periodically compounded rate of return that gives a net present value of 0.0
+
+/// ## Parameters
+/// `values` : array_like, shape(N,)
+/// * input cash flows per time period
+/// * by convention, net "deposits" are negative and net "withdrawals" are positive
+/// * e.g., the first element of `values`, which represents the initial investment, is typically negative
+
+/// ## Return
+/// * `irr`: internal rate of return for periodic input `values`
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
+/// let irr = InternalRateReturn::from_vec(values);
+/// println!("{:#?}'s irr is {:#?}", irr, irr.get());
+/// ```
+/// ## Caveat
+/// * I use Newton-Raphson method to find first `irr` that makes the `npv` of given cash flows 0
+/// * I am still trying to find/craft packge to find roots of polynomial in similar way as `numpy_financial`
+/// * Appreciate any feedbacks
 #[derive(Debug)]
 pub struct InternalRateReturn {
     values: Vec<f64>,
 }
 
 impl InternalRateReturn {
-    /// Instantiate a `InternalRateReturn` instance from a vector of `f64`
+    /// Instantiate an `InternalRateReturn` instance from a vector of `f64`
     pub fn from_vec(values: Vec<f64>) -> Self {
         // vec must at lease be of 2 elements
         // - to raise error in future not delegat to `irr`
@@ -88,7 +92,7 @@ impl InternalRateReturn {
     }
 
     // fina all possible roots- not used
-    fn find_roots(v: &Vec<f64>) -> Vec<f64> {
+    fn _find_roots(v: &Vec<f64>) -> Vec<f64> {
         // to re-implement
         let mut x = -10.0;
         let mut iter = 0;
@@ -170,8 +174,9 @@ impl InternalRateReturn {
     }
 }
 
+#[allow(unused_imports)]
 mod test {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn test_fx() {

@@ -1,5 +1,5 @@
-use crate::util::{float_close, WhenType, ATOL, RTOL};
-/// # Compute the future value.
+use crate::WhenType;
+/// # Compute the future value
 
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
@@ -64,8 +64,9 @@ impl FutureValue {
     }
 }
 
+#[allow(unused_imports)]
 mod test {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn test_fv_with_begin() {

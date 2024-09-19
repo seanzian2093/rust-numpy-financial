@@ -22,6 +22,7 @@
 //! * `numpy_financial` has some its own issues
 
 //! ## Example
+//! You will find example in each module page
 //! ```rust
 //! use rfinancial::*;
 //! let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
@@ -54,4 +55,4 @@ pub use crate::pmt::Payment;
 pub use crate::ppmt::PrincipalPayment;
 pub use crate::pv::PresentValue;
 pub use crate::rate::Rate;
-pub use crate::util::WhenType;
+pub use crate::util::*;

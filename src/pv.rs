@@ -1,5 +1,5 @@
-use crate::util::{float_close, WhenType, ATOL, RTOL};
-/// # Compute the present value.
+use crate::util::WhenType;
+/// # Compute the present value
 
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
@@ -61,8 +61,9 @@ impl PresentValue {
     }
 }
 
+#[allow(unused_imports)]
 mod test {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn test_pv_with_begin() {

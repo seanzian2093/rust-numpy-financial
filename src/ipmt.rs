@@ -1,5 +1,4 @@
-use crate::util::{float_close, WhenType, ATOL, RTOL};
-use crate::{FutureValue, Payment};
+use crate::{FutureValue, Payment, WhenType};
 /// # Compute the interest portion of a payment
 
 /// ## Parameters
@@ -88,8 +87,9 @@ impl InterestPayment {
     }
 }
 
+#[allow(unused_imports)]
 mod test {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn test_ipmt_with_end() {

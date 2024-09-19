@@ -67,6 +67,11 @@ println!("\n{:#?}'s pv is {}", pv, pv.get());
 // rate
 let rate = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100));
 println!("\n{:#?}'s rate is {:#?}", rate, rate.get());
+
+// irr
+let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
+let irr = InternalRateReturn::from_vec(values);
+println!("\n{:#?}'s irr is {:#?}", irr, irr.get());
 ```
 
 ## Future Works

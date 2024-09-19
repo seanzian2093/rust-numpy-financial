@@ -1,4 +1,4 @@
-use crate::util::{float_close, WhenType, ATOL, RTOL};
+use crate::util::WhenType;
 /// # Compute the payment against loan principal plus interest
 
 /// ## Parameters
@@ -61,8 +61,9 @@ impl Payment {
     }
 }
 
+#[allow(unused_imports)]
 mod test {
-    use super::*;
+    use crate::*;
 
     #[test]
     fn test_pmt_with_end() {

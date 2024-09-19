@@ -1,5 +1,9 @@
+/// Tolerance of relative difference
 pub const RTOL: f64 = 1e-10;
+/// Tolerance of absolute difference
 pub const ATOL: f64 = 1e-5;
+
+/// To compare if two `f64` are close enough to be treated as `equal`
 pub fn float_close(lhs: f64, rhs: f64, rtol: f64, atol: f64) -> bool {
     let cond1 = ((lhs - rhs) / rhs).abs() <= rtol;
     let cond2 = (lhs - rhs).abs() <= atol;
@@ -8,7 +12,7 @@ pub fn float_close(lhs: f64, rhs: f64, rtol: f64, atol: f64) -> bool {
 }
 
 #[derive(Clone, Debug)]
-/// when payments are due
+/// when payments are due in a payment period
 pub enum WhenType {
     End = 0,
     Begin = 1,

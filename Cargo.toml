@@ -1,6 +1,6 @@
 [package]
 name = "rfinancial"
-version = "0.1.7-wip"
+version = "0.1.7"
 edition = "2021"
 include = ["src/**/*", "Cargo.toml", "README.md"]
 homepage = "https://github.com/seanzian2093/rust-numpy-financial"
@@ -11,8 +11,3 @@ categories = ["finance", "mathematics"]
 license = "MIT"
 
 [dependencies]
-
-[lints.rust]
-dead_code = "allow"
-unused_variables = "allow"
-unused_imports = "allow"

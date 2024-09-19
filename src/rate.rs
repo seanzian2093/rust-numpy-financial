@@ -1,5 +1,5 @@
-use crate::util::{float_close, WhenType, ATOL, RTOL};
-/// # Compute the interest rate.
+use crate::util::WhenType;
+/// # Compute the interest rate
 
 /// ## Parameters
 /// * `nper` : number of compounding periods
@@ -110,11 +110,12 @@ impl Rate {
     }
 }
 
+#[allow(unused_imports)]
 mod test {
-    use super::*;
+    use crate::*;
 
     #[test]
-    fn tet_rate_with_end() {
+    fn test_rate_with_end() {
         let nper = 10;
         let pmt = 0.0;
         let pv = -3500.0;
@@ -148,7 +149,7 @@ mod test {
     }
 
     #[test]
-    fn tet_rate_with_begin() {
+    fn test_rate_with_begin() {
         let nper = 10;
         let pmt = 0.0;
         let pv = -3500.0;
@@ -182,7 +183,7 @@ mod test {
     }
 
     #[test]
-    fn tet_rate_no_solution() {
+    fn test_rate_no_solution() {
         let nper = 12;
         let pmt = 400.0;
         let pv = 10000.0;

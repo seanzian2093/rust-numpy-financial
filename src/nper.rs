@@ -1,5 +1,5 @@
-use crate::util::{float_close, WhenType, ATOL, RTOL};
-/// # Compute the number of periodic payments.
+use crate::WhenType;
+/// # Compute the number of periodic payments
 
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
@@ -72,11 +72,9 @@ impl NumberPeriod {
     }
 }
 
+#[allow(unused_imports)]
 mod test {
-
-    use std::f64::INFINITY;
-
-    use super::*;
+    use crate::*;
 
     #[test]
     fn test_simple_case() {
