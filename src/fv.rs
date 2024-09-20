@@ -65,6 +65,7 @@ impl FutureValue {
 }
 
 #[allow(unused_imports)]
+#[cfg(test)]
 mod test {
     use crate::*;
 

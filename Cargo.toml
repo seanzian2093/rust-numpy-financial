@@ -6,8 +6,13 @@ include = ["src/**/*", "Cargo.toml", "README.md"]
 homepage = "https://github.com/seanzian2093/rust-numpy-financial"
 description = "A financial crate mimicking `numpy_financial` in Python"
 repository = "https://github.com/seanzian2093/rust-numpy-financial"
-keywords = ["finance", "mathematics", "investment"]
+keywords = ["finance", "mathematics", "investment", "algorithms", "development-tools"]
 categories = ["finance", "mathematics"]
 license = "MIT"
+rust-version = "1.81"
+authors = ["Sean Zian"]
+
+[badges]
+maintenance = { status = "actively-developed"}
 
 [dependencies]

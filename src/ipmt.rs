@@ -88,6 +88,7 @@ impl InterestPayment {
 }
 
 #[allow(unused_imports)]
+#[cfg(test)]
 mod test {
     use crate::*;
 
