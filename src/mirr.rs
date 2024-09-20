@@ -84,7 +84,8 @@ impl ModifiedIRR {
 }
 
 #[allow(unused_imports)]
-mod test {
+#[cfg(test)]
+mod tests {
     use crate::*;
 
     #[test]
