@@ -1,4 +1,4 @@
-use crate::WhenType;
+use crate::{get_f64, get_u32, get_when, ParaType, WhenType};
 /// # Compute the future value
 
 /// ## Parameters
@@ -27,6 +27,8 @@ pub struct FutureValue {
     when: WhenType,
 }
 
+pub type FVMap = std::collections::HashMap<String, ParaType>;
+
 impl FutureValue {
     /// Instantiate a `FutureValue` instance from a tuple of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
     pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Self {
@@ -36,6 +38,22 @@ impl FutureValue {
             pmt: tup.2,
             pv: tup.3,
             when: tup.4,
+        }
+    }
+
+    /// Instantiate a `FutureValue` instance from a hash map with keys of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
+    pub fn from_map(map: FVMap) -> Self {
+        let rate = get_f64(&map, "rate").unwrap();
+        let nper = get_u32(&map, "nper").unwrap();
+        let pmt = get_f64(&map, "pmt").unwrap();
+        let pv = get_f64(&map, "pv").unwrap();
+        let when = get_when(&map, "when").unwrap();
+        FutureValue {
+            rate,
+            nper,
+            pmt,
+            pv,
+            when,
         }
     }
 
@@ -68,6 +86,35 @@ impl FutureValue {
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[test]
+    fn test_fv_from_tuple() {
+        let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
+        let cond = (fv.rate == 0.075)
+            & (fv.nper == 20)
+            & (fv.pmt == -2000.0)
+            & (fv.pv == 0.0)
+            & (fv.when == WhenType::End);
+
+        assert!(cond);
+    }
+
+    #[test]
+    fn test_fv_from_map() {
+        let mut map = FVMap::new();
+        map.insert("rate".into(), ParaType::F64(0.075));
+        map.insert("nper".into(), ParaType::U32(20));
+        map.insert("pmt".into(), ParaType::F64(-2000.0));
+        map.insert("pv".into(), ParaType::F64(0.0));
+        let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
+        let cond = (fv.rate == 0.075)
+            & (fv.nper == 20)
+            & (fv.pmt == -2000.0)
+            & (fv.pv == 0.0)
+            & (fv.when == WhenType::End);
+
+        assert!(cond);
+    }
 
     #[test]
     fn test_fv_with_begin() {

@@ -49,7 +49,7 @@ mod pv;
 mod rate;
 mod util;
 
-pub use crate::fv::FutureValue;
+pub use crate::fv::*;
 pub use crate::ipmt::InterestPayment;
 pub use crate::irr::InternalRateReturn;
 pub use crate::mirr::ModifiedIRR;
