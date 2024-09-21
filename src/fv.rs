@@ -42,6 +42,7 @@ impl FutureValue {
     }
 
     /// Instantiate a `FutureValue` instance from a hash map with keys of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
     pub fn from_map(map: FVMap) -> Self {
         let rate = get_f64(&map, "rate").unwrap();
         let nper = get_u32(&map, "nper").unwrap();
@@ -106,7 +107,8 @@ mod tests {
         map.insert("nper".into(), ParaType::U32(20));
         map.insert("pmt".into(), ParaType::F64(-2000.0));
         map.insert("pv".into(), ParaType::F64(0.0));
-        let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let fv = FutureValue::from_map(map);
         let cond = (fv.rate == 0.075)
             & (fv.nper == 20)
             & (fv.pmt == -2000.0)

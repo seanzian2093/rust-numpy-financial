@@ -1,4 +1,4 @@
-use crate::{FutureValue, Payment, WhenType};
+use crate::{get_f64, get_u32, get_when, FutureValue, ParaType, Payment, WhenType};
 /// # Compute the interest portion of a payment
 
 /// ## Parameters
@@ -29,6 +29,8 @@ pub struct InterestPayment {
     when: WhenType,
 }
 
+pub type IPMTMap = std::collections::HashMap<String, ParaType>;
+
 impl InterestPayment {
     /// Instantiate a `InterestPayment` instance from a tuple of (`rate`, `per`, `nper`, `pv`, `fv` and `when`) in said order
     pub fn from_tuple(tup: (f64, u32, u32, f64, f64, WhenType)) -> Self {
@@ -42,6 +44,24 @@ impl InterestPayment {
         }
     }
 
+    /// Instantiate a `FutureValue` instance from a hash map with keys of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    pub fn from_map(map: IPMTMap) -> Self {
+        let rate = get_f64(&map, "rate").unwrap();
+        let per = get_u32(&map, "per").unwrap();
+        let nper = get_u32(&map, "nper").unwrap();
+        let pv = get_f64(&map, "pv").unwrap();
+        let fv = get_f64(&map, "fv").unwrap();
+        let when = get_when(&map, "when").unwrap();
+        InterestPayment {
+            rate,
+            per,
+            nper,
+            pv,
+            fv,
+            when,
+        }
+    }
     fn ipmt(&self) -> Option<f64> {
         /*
             The total payment is made up of payment against principal plus interest.
@@ -90,8 +110,42 @@ impl InterestPayment {
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
+    use ipmt::IPMTMap;
+
     use crate::*;
 
+    #[test]
+    fn test_ipmt_from_tuple() {
+        let ipmt = InterestPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End));
+        let cond = (ipmt.rate == 0.1 / 12.0)
+            & (ipmt.per == 1)
+            & (ipmt.nper == 24)
+            & (ipmt.pv == 2000.0)
+            & (ipmt.fv == 0.0)
+            & (ipmt.when == WhenType::End);
+
+        assert!(cond);
+    }
+
+    #[test]
+    fn test_ipmt_from_map() {
+        let mut map = IPMTMap::new();
+        map.insert("rate".into(), ParaType::F64(0.1 / 12.0));
+        map.insert("per".into(), ParaType::U32(1));
+        map.insert("nper".into(), ParaType::U32(24));
+        map.insert("pv".into(), ParaType::F64(2000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let ipmt = InterestPayment::from_map(map);
+        let cond = (ipmt.rate == 0.1 / 12.0)
+            & (ipmt.per == 1)
+            & (ipmt.nper == 24)
+            & (ipmt.pv == 2000.0)
+            & (ipmt.fv == 0.0)
+            & (ipmt.when == WhenType::End);
+
+        assert!(cond);
+    }
     #[test]
     fn test_ipmt_with_end() {
         let rate = 0.1 / 12.0;
