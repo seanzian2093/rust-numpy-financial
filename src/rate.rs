@@ -1,4 +1,4 @@
-use crate::util::WhenType;
+use crate::{get_f64, get_u32, get_when, util::WhenType, ParaMap};
 /// # Compute the interest rate
 
 /// ## Parameters
@@ -46,6 +46,29 @@ impl Rate {
             guess: tup.5,
             tol: tup.6,
             maxiter: tup.7,
+        }
+    }
+
+    /// Instantiate a `Rate` instance from a hash map with keys of (`nper`, `pmt`, `pv`, `fv`, `when`, `guess`, `tol`, `maxiter`) in said order
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    pub fn from_map(map: ParaMap) -> Self {
+        let nper = get_u32(&map, "nper").unwrap();
+        let pmt = get_f64(&map, "pmt").unwrap();
+        let pv = get_f64(&map, "pv").unwrap();
+        let fv = get_f64(&map, "fv").unwrap();
+        let when = get_when(&map, "when").unwrap();
+        let guess = get_f64(&map, "guess").unwrap();
+        let tol = get_f64(&map, "tol").unwrap();
+        let maxiter = get_u32(&map, "maxiter").unwrap();
+        Rate {
+            nper,
+            pmt,
+            pv,
+            fv,
+            when,
+            guess,
+            tol,
+            maxiter,
         }
     }
 
@@ -104,6 +127,7 @@ impl Rate {
             return None;
         }
     }
+
     /// Get the rate from an instance of `Rate`
     pub fn get(&self) -> Option<f64> {
         self.rate()
@@ -114,6 +138,45 @@ impl Rate {
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[test]
+    fn test_rate_from_tuple() {
+        let rate = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100));
+        // npf.rate(10, 0, -3500, 10000)
+        // 0.11069085371426901
+        let res = rate.get().unwrap();
+        let tgt = 0.11069085371426901;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_rate_from_map() {
+        let mut map = ParaMap::new();
+        map.insert("nper".into(), ParaType::U32(10));
+        map.insert("pmt".into(), ParaType::F64(0.0));
+        map.insert("pv".into(), ParaType::F64(-3500.0));
+        map.insert("fv".into(), ParaType::F64(10000.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        map.insert("guess".into(), ParaType::F64(0.1));
+        map.insert("tol".into(), ParaType::F64(1e-6));
+        map.insert("maxiter".into(), ParaType::U32(100));
+        let rate = Rate::from_map(map);
+        // npf.rate(10, 0, -3500, 10000)
+        // 0.11069085371426901
+        let res = rate.get().unwrap();
+        let tgt = 0.11069085371426901;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
 
     #[test]
     fn test_rate_with_end() {

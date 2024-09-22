@@ -1,3 +1,5 @@
+use crate::{get_f64, get_vecf64, ParaMap};
+
 /// # Compute the Modified Internal Rate of Return (MIRR)
 
 /// MIRR is a financial metric that takes into account both the cost of the investment and the return on reinvested cash flows.
@@ -27,12 +29,25 @@ pub struct ModifiedIRR {
 }
 
 impl ModifiedIRR {
-    /// Instantiate an instance of `mirr` from a tuple of `(Vec<f64>, f64, f64>)` in said order
+    /// Instantiate an instance of `ModifiedIRR` from a tuple of `(Vec<f64>, f64, f64>)` in said order
     pub fn from_tuple(tup: (Vec<f64>, f64, f64)) -> Self {
         ModifiedIRR {
             values: tup.0,
             finance_rate: tup.1,
             reinvest_rate: tup.2,
+        }
+    }
+
+    /// Instantiate a `ModifiedIRR` instance from a hash map with keys of (`values`, `finance_rate`, `reinvest_rate`) in said order
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    pub fn from_map(map: ParaMap) -> Self {
+        let values = get_vecf64(&map, "values").unwrap();
+        let finance_rate = get_f64(&map, "finance_rate").unwrap();
+        let reinvest_rate = get_f64(&map, "reinvest_rate").unwrap();
+        ModifiedIRR {
+            values,
+            finance_rate,
+            reinvest_rate,
         }
     }
 
@@ -86,10 +101,12 @@ impl ModifiedIRR {
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
+    use std::collections::btree_map::Values;
+
     use crate::*;
 
     #[test]
-    fn test_mirr() {
+    fn test_mirr_from_tuple() {
         // case 1
         // npf.mirr([-120000, 39000, 30000, 21000, 37000, 46000], 0.10, 0.12)
         // 0.1260941303659051
@@ -109,6 +126,29 @@ mod tests {
         let tgt = 0.3428233878421769;
 
         let mirr = ModifiedIRR::from_tuple(tup);
+        let res = mirr.get().unwrap();
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        )
+    }
+
+    #[test]
+    fn test_mirr_from_map() {
+        // npf.mirr([100, 200, -50, 300, -200], 0.05, 0.06)
+        // 0.3428233878421769;
+
+        let tup = (vec![100.0, 200.0, -50.0, 300.00, -200.0], 0.05, 0.06);
+        let mut map = ParaMap::new();
+        map.insert("values".to_string(), ParaType::VecF64(tup.0));
+        map.insert("finance_rate".to_string(), ParaType::F64(tup.1));
+        map.insert("reinvest_rate".to_string(), ParaType::F64(tup.2));
+
+        let tgt = 0.3428233878421769;
+
+        let mirr = ModifiedIRR::from_map(map);
         let res = mirr.get().unwrap();
         assert!(
             float_close(res, tgt, RTOL, ATOL),

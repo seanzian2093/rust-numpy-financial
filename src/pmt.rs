@@ -1,4 +1,4 @@
-use crate::util::WhenType;
+use crate::{get_f64, get_u32, get_when, ParaMap, WhenType};
 /// # Compute the payment against loan principal plus interest
 
 /// ## Parameters
@@ -38,6 +38,23 @@ impl Payment {
         }
     }
 
+    /// Instantiate a `Payment` instance from a hash map with keys of (`rate`, `nper`, `pv`, `fv`, and `when`) in said order
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    pub fn from_map(map: ParaMap) -> Self {
+        let rate = get_f64(&map, "rate").unwrap();
+        let nper = get_u32(&map, "nper").unwrap();
+        let pv = get_f64(&map, "pv").unwrap();
+        let fv = get_f64(&map, "fv").unwrap();
+        let when = get_when(&map, "when").unwrap();
+        Payment {
+            rate,
+            nper,
+            pv,
+            fv,
+            when,
+        }
+    }
+
     fn pmt(&self) -> f64 {
         /*
         Solve below equation if rate is not 0
@@ -55,6 +72,7 @@ impl Payment {
             -(self.pv + self.fv) / self.nper as f64
         }
     }
+
     /// Get the payment from an instance of `Payment`
     pub fn get(&self) -> f64 {
         self.pmt()
@@ -65,6 +83,41 @@ impl Payment {
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[test]
+    fn test_pmt_from_tuple() {
+        let pmt = Payment::from_tuple((0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End));
+
+        let res = pmt.get();
+        let tgt = -304.145914;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_pmt_from_map() {
+        let mut map = ParaMap::new();
+        map.insert("rate".into(), ParaType::F64(0.08 / 12.0));
+        map.insert("nper".into(), ParaType::U32(60));
+        map.insert("pv".into(), ParaType::F64(15000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+
+        let pmt = Payment::from_map(map);
+
+        let res = pmt.get();
+        let tgt = -304.145914;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
 
     #[test]
     fn test_pmt_with_end() {
@@ -92,6 +145,7 @@ mod tests {
             tgt
         );
     }
+
     #[test]
     fn test_pmt_zero_rate() {
         let rate = 0.0;

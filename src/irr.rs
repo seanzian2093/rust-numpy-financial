@@ -1,4 +1,4 @@
-use crate::util::{float_close, ATOL, RTOL};
+use crate::{float_close, get_vecf64, ParaMap, ATOL, RTOL};
 /// # Compute the Internal Rate of Return (IRR)
 /// This is the "average" periodically compounded rate of return that gives a net present value of 0.0
 
@@ -35,6 +35,13 @@ impl InternalRateReturn {
         InternalRateReturn { values }
     }
 
+    /// Instantiate a `InterestPayment` instance from a hash map with keys of (`values`)
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    pub fn from_map(map: ParaMap) -> Self {
+        let values = get_vecf64(&map, "values").unwrap();
+        InternalRateReturn { values }
+    }
+
     fn fx(v: &Vec<f64>, x: f64) -> f64 {
         let fx: f64 = v
             .iter()
@@ -44,6 +51,7 @@ impl InternalRateReturn {
             .sum();
         fx
     }
+
     fn dx(v: &Vec<f64>, x: f64) -> f64 {
         let dx: f64 = v
             .iter()
@@ -180,7 +188,7 @@ mod tests {
     use crate::*;
 
     #[test]
-    fn test_fx() {
+    fn test_irr_fx() {
         let c: Vec<f64> = vec![1.0, 2.0, 3.0];
         let x = 2.0;
         let res = InternalRateReturn::fx(&c, x);
@@ -191,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_dx() {
+    fn test_irr_dx() {
         let c: Vec<f64> = vec![1.0, 2.0, 3.0];
         let x = 2.0;
         let res = InternalRateReturn::dx(&c, x);
@@ -203,7 +211,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_root() {
+    fn test_irr_find_root() {
         // -1.0 * x^2 + 1=0 -> x =1 and -1
         // let c: Vec<f64> = vec![-1.0, 0.0, 1.0];
 
@@ -222,11 +230,28 @@ mod tests {
     }
 
     #[test]
-    fn test_irr() {
-        //         >>> npf.irr([-150000, 15000, 25000, 35000, 45000, 60000])
+    fn test_irr_from_vec() {
+        // npf.irr([-150000, 15000, 25000, 35000, 45000, 60000])
         // 0.052432888859413884
         let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
         let res = InternalRateReturn::from_vec(values).get().unwrap();
+        let tgt = 0.052432888859413884;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        )
+    }
+
+    #[test]
+    fn test_irr_from_map() {
+        // npf.irr([-150000, 15000, 25000, 35000, 45000, 60000])
+        // 0.052432888859413884
+        let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
+        let mut map = ParaMap::new();
+        map.insert("values".to_string(), ParaType::VecF64(values));
+        let res = InternalRateReturn::from_map(map).get().unwrap();
         let tgt = 0.052432888859413884;
         assert!(
             float_close(res, tgt, RTOL, ATOL),

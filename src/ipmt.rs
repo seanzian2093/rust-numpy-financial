@@ -1,4 +1,4 @@
-use crate::{get_f64, get_u32, get_when, FutureValue, ParaType, Payment, WhenType};
+use crate::{get_f64, get_u32, get_when, FutureValue, ParaMap, Payment, WhenType};
 /// # Compute the interest portion of a payment
 
 /// ## Parameters
@@ -29,8 +29,6 @@ pub struct InterestPayment {
     when: WhenType,
 }
 
-pub type IPMTMap = std::collections::HashMap<String, ParaType>;
-
 impl InterestPayment {
     /// Instantiate a `InterestPayment` instance from a tuple of (`rate`, `per`, `nper`, `pv`, `fv` and `when`) in said order
     pub fn from_tuple(tup: (f64, u32, u32, f64, f64, WhenType)) -> Self {
@@ -44,9 +42,9 @@ impl InterestPayment {
         }
     }
 
-    /// Instantiate a `FutureValue` instance from a hash map with keys of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
+    /// Instantiate a `InterestPayment` instance from a hash map with keys of (`rate`, `per`, `nper`, `pv` and `when`) in said order
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
-    pub fn from_map(map: IPMTMap) -> Self {
+    pub fn from_map(map: ParaMap) -> Self {
         let rate = get_f64(&map, "rate").unwrap();
         let per = get_u32(&map, "per").unwrap();
         let nper = get_u32(&map, "nper").unwrap();
@@ -62,6 +60,7 @@ impl InterestPayment {
             when,
         }
     }
+
     fn ipmt(&self) -> Option<f64> {
         /*
             The total payment is made up of payment against principal plus interest.
@@ -110,8 +109,6 @@ impl InterestPayment {
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
-    use ipmt::IPMTMap;
-
     use crate::*;
 
     #[test]
@@ -129,7 +126,7 @@ mod tests {
 
     #[test]
     fn test_ipmt_from_map() {
-        let mut map = IPMTMap::new();
+        let mut map = ParaMap::new();
         map.insert("rate".into(), ParaType::F64(0.1 / 12.0));
         map.insert("per".into(), ParaType::U32(1));
         map.insert("nper".into(), ParaType::U32(24));
@@ -232,6 +229,7 @@ mod tests {
             tgt
         );
     }
+
     #[test]
     fn test_ipmt_zero_per() {
         let rate = 0.1 / 12.0;

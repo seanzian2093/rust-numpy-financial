@@ -1,4 +1,4 @@
-use crate::WhenType;
+use crate::{get_f64, get_when, ParaMap, WhenType};
 /// # Compute the number of periodic payments
 
 /// ## Parameters
@@ -36,6 +36,23 @@ impl NumberPeriod {
             pv: tup.2,
             fv: tup.3,
             when: tup.4,
+        }
+    }
+
+    /// Instantiate a `NumberPeriod ` instance from a hash map with keys of (`rate`, `pmt`, `pv`, `fv` and `when`) in said order
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    pub fn from_map(map: ParaMap) -> Self {
+        let rate = get_f64(&map, "rate").unwrap();
+        let pmt = get_f64(&map, "pmt").unwrap();
+        let pv = get_f64(&map, "pv").unwrap();
+        let fv = get_f64(&map, "fv").unwrap();
+        let when = get_when(&map, "when").unwrap();
+        NumberPeriod {
+            rate,
+            pmt,
+            pv,
+            fv,
+            when,
         }
     }
 
@@ -78,7 +95,7 @@ mod tests {
     use crate::*;
 
     #[test]
-    fn test_simple_case() {
+    fn test_nper_from_tuple() {
         let nper = NumberPeriod::from_tuple((0.075, -2000.0, 0.0, 100000.0, WhenType::End));
         let res = nper.get().unwrap();
         let tgt = 21.544944;
@@ -94,7 +111,31 @@ mod tests {
     }
 
     #[test]
-    fn test_zero_rate_nonzero_pmt() {
+    fn test_nper_from_map() {
+        let mut map = ParaMap::new();
+        map.insert("rate".into(), ParaType::F64(0.075));
+        map.insert("pmt".into(), ParaType::F64(-2000.0));
+        map.insert("pv".into(), ParaType::F64(0.0));
+        map.insert("fv".into(), ParaType::F64(100000.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+
+        let nper = NumberPeriod::from_map(map);
+
+        let res = nper.get().unwrap();
+        let tgt = 21.544944;
+
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+        // npf.nper([0, 0.075], -2000, 0, 100000),
+        // [50, 21.544944],  # Computed using Google Sheet's NPER
+    }
+
+    #[test]
+    fn test_nper_zero_rate_nonzero_pmt() {
         let nper = NumberPeriod::from_tuple((0.0, -2000.0, 0.0, 100000.0, WhenType::End));
         let res = nper.get().unwrap();
         let tgt = 50.0;
@@ -108,7 +149,7 @@ mod tests {
     }
 
     #[test]
-    fn test_zero_rate_zero_pmt() {
+    fn test_nper_zero_rate_zero_pmt() {
         let nper = NumberPeriod::from_tuple((0.0, 0.0, 0.0, 100000.0, WhenType::End));
         let res = nper.get().unwrap();
         let tgt = f64::INFINITY;
@@ -117,7 +158,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lt_negative_one_rate() {
+    fn test_nper_lt_negative_one_rate() {
         let nper = NumberPeriod::from_tuple((-10.0, 0.0, 0.0, 100000.0, WhenType::End));
         let res = nper.get();
         let tgt = None;
