@@ -1,4 +1,4 @@
-use crate::{InterestPayment, Payment, WhenType};
+use crate::{get_f64, get_u32, get_when, InterestPayment, ParaMap, Payment, WhenType};
 /// # Compute the payment against loan principal
 
 /// ## Parameters
@@ -42,6 +42,25 @@ impl PrincipalPayment {
         }
     }
 
+    /// Instantiate a `PrincipalPayment` instance from a hash map with keys of (`rate`, `per`, `nper`,`pv`, `fv`, and `when`) in said order
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    pub fn from_map(map: ParaMap) -> Self {
+        let rate = get_f64(&map, "rate").unwrap();
+        let per = get_u32(&map, "per").unwrap();
+        let nper = get_u32(&map, "nper").unwrap();
+        let pv = get_f64(&map, "pv").unwrap();
+        let fv = get_f64(&map, "fv").unwrap();
+        let when = get_when(&map, "when").unwrap();
+        PrincipalPayment {
+            rate,
+            per,
+            nper,
+            pv,
+            fv,
+            when,
+        }
+    }
+
     fn ppmt(&self) -> Option<f64> {
         /*
             The total payment is made up of payment against principal plus interest.
@@ -80,6 +99,43 @@ mod tests {
     use crate::*;
 
     #[test]
+    fn test_ppmt_from_tuple() {
+        let ppmt = PrincipalPayment::from_tuple((0.1 / 12.0, 1, 60, 55000.0, 0.0, WhenType::End));
+        // npf.ppmt(0.1 / 12, 1, 60, 55000)
+        // -710.254125786425
+        let res = ppmt.get().unwrap();
+        let tgt = -710.254125786425;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_ppmt_from_map() {
+        let mut map = ParaMap::new();
+        map.insert("rate".into(), ParaType::F64(0.1 / 12.0));
+        map.insert("per".into(), ParaType::U32(1));
+        map.insert("nper".into(), ParaType::U32(60));
+        map.insert("pv".into(), ParaType::F64(55000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let ppmt = PrincipalPayment::from_map(map);
+        // npf.ppmt(0.1 / 12, 1, 60, 55000)
+        // -710.254125786425
+        let res = ppmt.get().unwrap();
+        let tgt = -710.254125786425;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
     fn test_ppmt_with_end() {
         let rate = 0.1 / 12.0;
         let per = 1;
@@ -88,7 +144,7 @@ mod tests {
         let fv = 0.0;
         let when = WhenType::End;
 
-        let ipmt = PrincipalPayment {
+        let ppmt = PrincipalPayment {
             rate,
             per,
             nper,
@@ -98,7 +154,7 @@ mod tests {
         };
         // npf.ppmt(0.1 / 12, 1, 60, 55000)
         // -710.254125786425
-        let res = ipmt.get().unwrap();
+        let res = ppmt.get().unwrap();
         let tgt = -710.254125786425;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -117,7 +173,7 @@ mod tests {
         let fv = 0.0;
         let when = WhenType::Begin;
 
-        let ipmt = PrincipalPayment {
+        let ppmt = PrincipalPayment {
             rate,
             per,
             nper,
@@ -127,7 +183,7 @@ mod tests {
         };
         // npf.ppmt(0.1 / 12, 1, 60, 55000, 0, 'begin')
         // -1158.9297115237273
-        let res = ipmt.get().unwrap();
+        let res = ppmt.get().unwrap();
         let tgt = -1158.9297115237273;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -146,7 +202,7 @@ mod tests {
         let fv = 0.0;
         let when = WhenType::End;
 
-        let ipmt = PrincipalPayment {
+        let ppmt = PrincipalPayment {
             rate,
             per,
             nper,
@@ -154,7 +210,7 @@ mod tests {
             fv,
             when,
         };
-        let res = ipmt.get();
+        let res = ppmt.get();
         let tgt = None;
         assert_eq!(res, tgt, "{:#?} v.s. {:#?}", res, tgt);
     }

@@ -2,6 +2,19 @@
 
 A financial crate mimicking `numpy_financial` in Python.
 
+## Latest Updates
+
+* Yanked all the older versions other than the latest
+  * Expect this untill it reaches `1.0.0`
+* Added `from_map` for all modules, even the main struct has only one field.
+  * e.g. `irr` has only one filed `values`
+* Fix `unused` warnings
+* Fixed some typos in documenation
+
+## Next Updates
+
+* Error handling
+
 ## Modules
 
 ### Initial Working Version
@@ -23,8 +36,9 @@ A financial crate mimicking `numpy_financial` in Python.
 
 ## Planned Improvements
 
-* Fix `unused` warnings
+* Edge cases testing
 * Default arguments
+  * checked arithmetic
 * Error handling
 * Logging
 * Performance benchmarking

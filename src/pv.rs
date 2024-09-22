@@ -1,4 +1,4 @@
-use crate::util::WhenType;
+use crate::{get_f64, get_u32, get_when, util::WhenType, ParaMap};
 /// # Compute the present value
 
 /// ## Parameters
@@ -38,6 +38,23 @@ impl PresentValue {
         }
     }
 
+    /// Instantiate a `PresentValue` instance from a hash map with keys of (`rate`, `nper`,`pmt`, `fv`, and `when`) in said order
+    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    pub fn from_map(map: ParaMap) -> Self {
+        let rate = get_f64(&map, "rate").unwrap();
+        let nper = get_u32(&map, "nper").unwrap();
+        let pmt = get_f64(&map, "pmt").unwrap();
+        let fv = get_f64(&map, "fv").unwrap();
+        let when = get_when(&map, "when").unwrap();
+        PresentValue {
+            rate,
+            nper,
+            pmt,
+            fv,
+            when,
+        }
+    }
+
     fn fv(&self) -> f64 {
         /*
         Solve below equation if rate is not 0
@@ -65,6 +82,44 @@ impl PresentValue {
 #[cfg(test)]
 mod tests {
     use crate::*;
+
+    #[test]
+    fn test_pv_from_tuple() {
+        let pv = PresentValue::from_tuple((0.07, 20, 12000.0, 0.0, WhenType::End));
+
+        // npf.pv(0.07, 20, 12000, 0)
+        // -127128.17
+        let res = pv.get();
+        let tgt = -127128.17094619398;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_pv_from_map() {
+        let mut map = ParaMap::new();
+        map.insert("rate".into(), ParaType::F64(0.07));
+        map.insert("nper".into(), ParaType::U32(20));
+        map.insert("pmt".into(), ParaType::F64(12000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let pv = PresentValue::from_tuple((0.07, 20, 12000.0, 0.0, WhenType::End));
+
+        // npf.pv(0.07, 20, 12000, 0)
+        // -127128.17
+        let res = pv.get();
+        let tgt = -127128.17094619398;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
 
     #[test]
     fn test_pv_with_begin() {
