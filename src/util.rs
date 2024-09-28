@@ -1,5 +1,4 @@
-// use crate::{ParaError, Result};
-use crate::Result;
+use crate::{Error, Result};
 /// Tolerance of relative difference
 pub const RTOL: f64 = 1e-10;
 /// Tolerance of absolute difference
@@ -21,6 +20,7 @@ pub enum WhenType {
 }
 
 /// Parameter types in a enum
+#[derive(Debug)]
 pub enum ParaType {
     F64(f64),
     U32(u32),
@@ -34,54 +34,30 @@ pub fn get_f64(map: &ParaMap, field: &str) -> Result<f64> {
     if let Some(&ParaType::F64(v)) = map.get(field) {
         Ok(v)
     } else {
-        Err("Error getting paramter of f64".into())
+        Err(Error::ParaError(format!("{}: f64", field)))
     }
-
-    // if let ParaType::F64(v) = map.get(field).unwrap() {
-    //     Ok(v.to_owned())
-    // } else {
-    //     Err(())
-    // }
 }
 
 pub fn get_u32(map: &ParaMap, field: &str) -> Result<u32> {
     if let Some(&ParaType::U32(v)) = map.get(field) {
         Ok(v)
     } else {
-        Err("Error getting paramter of u32".into())
+        Err(Error::ParaError(format!("{}: u32", field)))
     }
-
-    // if let ParaType::U32(v) = map.get(field).unwrap() {
-    //     Ok(v.to_owned())
-    // } else {
-    //     Err(())
-    // }
 }
 
 pub fn get_when(map: &ParaMap, field: &str) -> Result<WhenType> {
     if let Some(&ParaType::When(ref v)) = map.get(field) {
         Ok(v.clone())
     } else {
-        Err("Error getting paramter of WhenType".into())
+        Err(Error::ParaError(format!("{}: WhenType", field)))
     }
-
-    // if let ParaType::When(v) = map.get(field).unwrap() {
-    //     Ok(v.to_owned())
-    // } else {
-    //     Err(ParaError)
-    // }
 }
 
 pub fn get_vecf64(map: &ParaMap, field: &str) -> Result<Vec<f64>> {
     if let Some(&ParaType::VecF64(ref v)) = map.get(field) {
         Ok(v.clone())
     } else {
-        Err("Error getting parameter of VecF64".into())
+        Err(Error::ParaError(format!("{}: VecF64", field)))
     }
-
-    // if let ParaType::VecF64(v) = map.get(field).unwrap() {
-    //     Ok(v.to_owned())
-    // } else {
-    //     Err(())
-    // }
 }
