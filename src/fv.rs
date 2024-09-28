@@ -1,4 +1,4 @@
-use crate::{get_f64, get_u32, get_when, ParaMap, WhenType};
+use crate::{get_f64, get_u32, get_when, ParaMap, Result, WhenType};
 /// # Compute the future value
 
 /// ## Parameters
@@ -43,19 +43,20 @@ impl FutureValue {
 
     /// Instantiate a `FutureValue` instance from a hash map with keys of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
-    pub fn from_map(map: ParaMap) -> Self {
-        let rate = get_f64(&map, "rate").unwrap();
-        let nper = get_u32(&map, "nper").unwrap();
-        let pmt = get_f64(&map, "pmt").unwrap();
-        let pv = get_f64(&map, "pv").unwrap();
-        let when = get_when(&map, "when").unwrap();
-        FutureValue {
+    pub fn from_map(map: ParaMap) -> Result<Self> {
+        let rate = get_f64(&map, "rate")?;
+        let nper = get_u32(&map, "nper")?;
+        let pmt = get_f64(&map, "pmt")?;
+        // let pv = get_f64(&map, "pv").unwrap();
+        let pv = get_f64(&map, "pv")?;
+        let when = get_when(&map, "when")?;
+        Ok(FutureValue {
             rate,
             nper,
             pmt,
             pv,
             when,
-        }
+        })
     }
 
     fn fv(&self) -> f64 {
@@ -101,14 +102,14 @@ mod tests {
     }
 
     #[test]
-    fn test_fv_from_map() {
+    fn test_fv_from_map() -> Result<()> {
         let mut map = ParaMap::new();
-        map.insert("rate".into(), ParaType::F64(0.075));
+        map.insert("Rate".into(), ParaType::F64(0.075));
         map.insert("nper".into(), ParaType::U32(20));
         map.insert("pmt".into(), ParaType::F64(-2000.0));
         map.insert("pv".into(), ParaType::F64(0.0));
         map.insert("when".into(), ParaType::When(WhenType::End));
-        let fv = FutureValue::from_map(map);
+        let fv = FutureValue::from_map(map)?;
         let cond = (fv.rate == 0.075)
             && (fv.nper == 20)
             && (fv.pmt == -2000.0)
@@ -116,6 +117,7 @@ mod tests {
             && (fv.when == WhenType::End);
 
         assert!(cond);
+        Ok(())
     }
 
     #[test]
