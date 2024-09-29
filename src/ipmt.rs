@@ -1,4 +1,4 @@
-use crate::{get_f64, get_u32, get_when, FutureValue, ParaMap, Payment, WhenType};
+use crate::{get_f64, get_u32, get_when, Error, FutureValue, ParaMap, Payment, Result, WhenType};
 /// # Compute the interest portion of a payment
 
 /// ## Parameters
@@ -44,24 +44,31 @@ impl InterestPayment {
 
     /// Instantiate a `InterestPayment` instance from a hash map with keys of (`rate`, `per`, `nper`, `pv` and `when`) in said order
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
-    pub fn from_map(map: ParaMap) -> Self {
-        let rate = get_f64(&map, "rate").unwrap();
-        let per = get_u32(&map, "per").unwrap();
-        let nper = get_u32(&map, "nper").unwrap();
-        let pv = get_f64(&map, "pv").unwrap();
-        let fv = get_f64(&map, "fv").unwrap();
-        let when = get_when(&map, "when").unwrap();
-        InterestPayment {
+    pub fn from_map(map: ParaMap) -> Result<Self> {
+        let op = |err: Error| {
+            Error::OtherError(format!(
+                "Failed construct an instance of `InterestPayment` from: `{:?}` <- {}",
+                map, err
+            ))
+        };
+
+        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
+        let per = get_u32(&map, "per").map_err(|err| op(err))?;
+        let nper = get_u32(&map, "nper").map_err(|err| op(err))?;
+        let pv = get_f64(&map, "pv").map_err(|err| op(err))?;
+        let fv = get_f64(&map, "fv").map_err(|err| op(err))?;
+        let when = get_when(&map, "when").map_err(|err| op(err))?;
+        Ok(InterestPayment {
             rate,
             per,
             nper,
             pv,
             fv,
             when,
-        }
+        })
     }
 
-    fn ipmt(&self) -> Option<f64> {
+    fn ipmt(&self) -> Result<Option<f64>> {
         /*
             The total payment is made up of payment against principal plus interest.
             pmt = ppmt + ipmt
@@ -72,7 +79,7 @@ impl InterestPayment {
             Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when.clone())).get();
         // remaining balance
         // only consider per > 1, i.e. starting from 1st payment
-        if self.per >= 1 {
+        let impt = if self.per >= 1 {
             let rbl = FutureValue::from_tuple((
                 self.rate,
                 self.per - 1,
@@ -80,7 +87,7 @@ impl InterestPayment {
                 self.pv,
                 self.when.clone(),
             ))
-            .get();
+            .get()?;
 
             match self.when {
                 WhenType::Begin => {
@@ -97,11 +104,13 @@ impl InterestPayment {
             // if 0th or negative-th(not possible though since u32) payments are requested, return None
         } else {
             None
-        }
+        };
+
+        Ok(impt)
     }
 
     /// Get the interet payment from an instance of `InterestPayment`
-    pub fn get(&self) -> Option<f64> {
+    pub fn get(&self) -> Result<Option<f64>> {
         self.ipmt()
     }
 }
@@ -109,17 +118,19 @@ impl InterestPayment {
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
+    use std::char::MAX;
+
     use crate::*;
 
     #[test]
     fn test_ipmt_from_tuple() {
         let ipmt = InterestPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End));
         let cond = (ipmt.rate == 0.1 / 12.0)
-            & (ipmt.per == 1)
-            & (ipmt.nper == 24)
-            & (ipmt.pv == 2000.0)
-            & (ipmt.fv == 0.0)
-            & (ipmt.when == WhenType::End);
+            && (ipmt.per == 1)
+            && (ipmt.nper == 24)
+            && (ipmt.pv == 2000.0)
+            && (ipmt.fv == 0.0)
+            && (ipmt.when == WhenType::End);
 
         assert!(cond);
     }
@@ -133,16 +144,17 @@ mod tests {
         map.insert("pv".into(), ParaType::F64(2000.0));
         map.insert("fv".into(), ParaType::F64(0.0));
         map.insert("when".into(), ParaType::When(WhenType::End));
-        let ipmt = InterestPayment::from_map(map);
+        let ipmt = InterestPayment::from_map(map).unwrap();
         let cond = (ipmt.rate == 0.1 / 12.0)
-            & (ipmt.per == 1)
-            & (ipmt.nper == 24)
-            & (ipmt.pv == 2000.0)
-            & (ipmt.fv == 0.0)
-            & (ipmt.when == WhenType::End);
+            && (ipmt.per == 1)
+            && (ipmt.nper == 24)
+            && (ipmt.pv == 2000.0)
+            && (ipmt.fv == 0.0)
+            && (ipmt.when == WhenType::End);
 
         assert!(cond);
     }
+
     #[test]
     fn test_ipmt_with_end() {
         let rate = 0.1 / 12.0;
@@ -162,7 +174,7 @@ mod tests {
         };
         // npf.ipmt(0.1 / 12, 1, 24, 2000),
         // -16.666667
-        let res = ipmt.get().unwrap();
+        let res = ipmt.get().unwrap().unwrap();
         let tgt = -16.666667;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -191,7 +203,7 @@ mod tests {
         };
         // npf.ipmt(0.0824 / 12, 1, 12, 2500, 0, 'begin')
         // array(0.)
-        let res = ipmt.get().unwrap();
+        let res = ipmt.get().unwrap().unwrap();
         let tgt = 0.0;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -220,7 +232,7 @@ mod tests {
         };
         // npf.ipmt(0.0824 / 12, 2, 12, 2500, 0, 'begin')
         // array(-15.68165675)
-        let res = ipmt.get().unwrap();
+        let res = ipmt.get().unwrap().unwrap();
         let tgt = -15.68165675;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -247,8 +259,38 @@ mod tests {
             fv,
             when,
         };
-        let res = ipmt.get();
+        let res = ipmt.get().unwrap();
         let tgt = None;
         assert_eq!(res, tgt, "{:#?} v.s. {:#?}", res, tgt);
+    }
+
+    #[test]
+    fn test_ipmt_nan() {
+        let mut map = ParaMap::new();
+        map.insert("rate".into(), ParaType::F64(0.1 / 12.0));
+        map.insert("per".into(), ParaType::U32(1));
+        map.insert("nper".into(), ParaType::U32(u32::MAX));
+        map.insert("pv".into(), ParaType::F64(2000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let ipmt = InterestPayment::from_map(map).unwrap();
+        let cond = ipmt.get().unwrap().unwrap().is_nan();
+
+        assert!(cond);
+    }
+
+    #[test]
+    fn test_ipmt_err() {
+        let mut map = ParaMap::new();
+        map.insert("Rate".into(), ParaType::F64(0.1 / 12.0));
+        map.insert("per".into(), ParaType::U32(1));
+        map.insert("nper".into(), ParaType::U32(u32::MAX));
+        map.insert("pv".into(), ParaType::F64(2000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let ipmt = InterestPayment::from_map(map);
+        let cond = ipmt.is_err();
+
+        assert!(cond);
     }
 }

@@ -1,4 +1,4 @@
-use crate::{get_f64, get_u32, get_when, InterestPayment, ParaMap, Payment, WhenType};
+use crate::{get_f64, get_u32, get_when, InterestPayment, ParaMap, Payment, Result, WhenType};
 /// # Compute the payment against loan principal
 
 /// ## Parameters
@@ -61,7 +61,7 @@ impl PrincipalPayment {
         }
     }
 
-    fn ppmt(&self) -> Option<f64> {
+    fn ppmt(&self) -> Result<Option<f64>> {
         /*
             The total payment is made up of payment against principal plus interest.
             pmt = ppmt + ipmt
@@ -79,16 +79,18 @@ impl PrincipalPayment {
             self.fv,
             self.when.clone(),
         ))
-        .get();
+        .get()?;
 
-        match ipmt {
+        let ppmt = match ipmt {
             Some(value) => Some(total_pmt - value),
             None => None,
-        }
+        };
+
+        Ok(ppmt)
     }
 
     /// Get the interet payment from an instance of `PrincipalPayment`
-    pub fn get(&self) -> Option<f64> {
+    pub fn get(&self) -> Result<Option<f64>> {
         self.ppmt()
     }
 }
@@ -103,7 +105,7 @@ mod tests {
         let ppmt = PrincipalPayment::from_tuple((0.1 / 12.0, 1, 60, 55000.0, 0.0, WhenType::End));
         // npf.ppmt(0.1 / 12, 1, 60, 55000)
         // -710.254125786425
-        let res = ppmt.get().unwrap();
+        let res = ppmt.get().unwrap().unwrap();
         let tgt = -710.254125786425;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -125,7 +127,7 @@ mod tests {
         let ppmt = PrincipalPayment::from_map(map);
         // npf.ppmt(0.1 / 12, 1, 60, 55000)
         // -710.254125786425
-        let res = ppmt.get().unwrap();
+        let res = ppmt.get().unwrap().unwrap();
         let tgt = -710.254125786425;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -154,7 +156,7 @@ mod tests {
         };
         // npf.ppmt(0.1 / 12, 1, 60, 55000)
         // -710.254125786425
-        let res = ppmt.get().unwrap();
+        let res = ppmt.get().unwrap().unwrap();
         let tgt = -710.254125786425;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -183,7 +185,7 @@ mod tests {
         };
         // npf.ppmt(0.1 / 12, 1, 60, 55000, 0, 'begin')
         // -1158.9297115237273
-        let res = ppmt.get().unwrap();
+        let res = ppmt.get().unwrap().unwrap();
         let tgt = -1158.9297115237273;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -210,7 +212,7 @@ mod tests {
             fv,
             when,
         };
-        let res = ppmt.get();
+        let res = ppmt.get().unwrap();
         let tgt = None;
         assert_eq!(res, tgt, "{:#?} v.s. {:#?}", res, tgt);
     }

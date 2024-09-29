@@ -15,7 +15,7 @@ use crate::{get_f64, get_u32, get_when, Error, ParaMap, Result, WhenType};
 /// ```rust
 /// use rfinancial::*;
 /// let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
-/// println!("{:#?}'s fv is {}", fv, fv.get());
+/// println!("{:#?}'s fv is {:?}", fv, fv.get());
 /// ```
 ///
 #[derive(Debug)]
@@ -87,18 +87,27 @@ impl FutureValue {
     }
 
     /// Get the future value from an instance of `FutureValue`
-    pub fn get(&self) -> f64 {
-        let fv = self.fv().unwrap();
-        if fv.is_nan() {
-            println!("Warning: NAN produced. Please check your input.");
-        };
-        fv
+    pub fn get(&self) -> Result<f64> {
+        self.fv()
     }
+
+    // pub fn get(&self) -> Option<f64> {
+    //     if let Some(fv) = self.fv().ok() {
+    //         if fv.is_nan() {
+    //             println!("Warning: NAN produced. Please check your input.");
+    //         };
+    //         Some(fv)
+    //     } else {
+    //         None
+    //     }
+    // }
 }
 
 #[allow(unused_imports)]
 #[cfg(test)]
 mod tests {
+    use core::f64;
+
     use crate::*;
 
     #[test]
@@ -114,14 +123,14 @@ mod tests {
     }
 
     #[test]
-    fn test_fv_from_map() -> Result<()> {
+    fn test_fv_from_map() {
         let mut map = ParaMap::new();
         map.insert("rate".into(), ParaType::F64(0.075));
         map.insert("nper".into(), ParaType::U32(20));
         map.insert("pmt".into(), ParaType::F64(-2000.0));
         map.insert("pv".into(), ParaType::F64(0.0));
         map.insert("when".into(), ParaType::When(WhenType::End));
-        let fv = FutureValue::from_map(map)?;
+        let fv = FutureValue::from_map(map).unwrap();
         let cond = (fv.rate == 0.075)
             && (fv.nper == 20)
             && (fv.pmt == -2000.0)
@@ -129,7 +138,6 @@ mod tests {
             && (fv.when == WhenType::End);
 
         assert!(cond);
-        Ok(())
     }
 
     #[test]
@@ -149,7 +157,7 @@ mod tests {
         };
         // npf.fv(0.075, 20, -2000, 0, 1),
         // 93105.064874
-        let res = fv.get();
+        let res = fv.get().unwrap();
         let tgt = 93105.064874;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -176,7 +184,7 @@ mod tests {
         };
         // npf.fv(0.075, 20, -2000, 0, 0),
         // 86609.362673042924,
-        let res = fv.get();
+        let res = fv.get().unwrap();
         let tgt = 86609.362673042924;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -201,7 +209,7 @@ mod tests {
             pv,
             when,
         };
-        let res = fv.get();
+        let res = fv.get().unwrap();
         let tgt = 2000.0;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -209,5 +217,34 @@ mod tests {
             res,
             tgt
         );
+    }
+
+    #[test]
+    fn test_fv_nan() {
+        let mut map = ParaMap::new();
+        // map.insert("rate".into(), ParaType::F64(f64::MAX));
+        map.insert("rate".into(), ParaType::F64(f64::MIN));
+        map.insert("nper".into(), ParaType::U32(100));
+        map.insert("pmt".into(), ParaType::F64(-2000.0));
+        map.insert("pv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let fv = FutureValue::from_map(map).unwrap();
+        let cond = fv.get().unwrap().is_nan();
+
+        assert!(cond);
+    }
+
+    #[test]
+    fn test_fv_err() {
+        let mut map = ParaMap::new();
+        map.insert("Rate".into(), ParaType::F64(0.075));
+        map.insert("nper".into(), ParaType::U32(100));
+        map.insert("pmt".into(), ParaType::F64(-2000.0));
+        map.insert("pv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let fv = FutureValue::from_map(map);
+        let cond = fv.is_err();
+
+        assert!(cond);
     }
 }
