@@ -26,7 +26,7 @@
 //! ```rust
 //! use rfinancial::*;
 //! let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
-//! println!("{:#?}'s fv is {}", fv, fv.get());
+//! println!("{:#?}'s fv is {:?}", fv, fv.get());
 //! ```
 //!
 //! ## Future Work
@@ -37,6 +37,7 @@
 //! * Use the crate and feedback
 //! * Submit pull request or issues though the GitHub repository
 
+mod error;
 mod fv;
 mod ipmt;
 mod irr;
@@ -49,6 +50,7 @@ mod pv;
 mod rate;
 mod util;
 
+pub use crate::error::*;
 pub use crate::fv::*;
 pub use crate::ipmt::InterestPayment;
 pub use crate::irr::InternalRateReturn;

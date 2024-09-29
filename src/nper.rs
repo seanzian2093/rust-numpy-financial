@@ -1,4 +1,4 @@
-use crate::{get_f64, get_when, ParaMap, WhenType};
+use crate::{get_f64, get_when, Error, ParaMap, Result, WhenType};
 /// # Compute the number of periodic payments
 
 /// ## Parameters
@@ -41,22 +41,28 @@ impl NumberPeriod {
 
     /// Instantiate a `NumberPeriod ` instance from a hash map with keys of (`rate`, `pmt`, `pv`, `fv` and `when`) in said order
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
-    pub fn from_map(map: ParaMap) -> Self {
-        let rate = get_f64(&map, "rate").unwrap();
-        let pmt = get_f64(&map, "pmt").unwrap();
-        let pv = get_f64(&map, "pv").unwrap();
-        let fv = get_f64(&map, "fv").unwrap();
-        let when = get_when(&map, "when").unwrap();
-        NumberPeriod {
+    pub fn from_map(map: ParaMap) -> Result<Self> {
+        let op = |err: Error| {
+            Error::OtherError(format!(
+                "Failed construct an instance of `NumberPeriod` from: `{:?}` <- {}",
+                map, err
+            ))
+        };
+        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
+        let pmt = get_f64(&map, "pmt").map_err(|err| op(err))?;
+        let pv = get_f64(&map, "pv").map_err(|err| op(err))?;
+        let fv = get_f64(&map, "fv").map_err(|err| op(err))?;
+        let when = get_when(&map, "when").map_err(|err| op(err))?;
+        Ok(NumberPeriod {
             rate,
             pmt,
             pv,
             fv,
             when,
-        }
+        })
     }
 
-    fn nper(&self) -> Option<f64> {
+    fn nper(&self) -> Result<Option<f64>> {
         /*
         Solve below equation if rate is not 0
         fv + pv*(1+rate)**nper + pmt*(1+rate*when)/rate*((1+rate)**nper-1) = 0
@@ -64,15 +70,15 @@ impl NumberPeriod {
         fv + pv + pmt*nper = 0
         */
         if (self.rate == 0.0) & (self.pmt == 0.0) {
-            return Some(f64::INFINITY);
+            return Ok(Some(f64::INFINITY));
         }
         if self.rate == 0.0 {
             // We know that pmt_ != 0, we don't need to check for division by 0
-            return Some(-(self.fv + self.pv) / self.pmt);
+            return Ok(Some(-(self.fv + self.pv) / self.pmt));
         }
 
         if self.rate <= -1.0 {
-            return None;
+            return Ok(None);
         }
 
         // We know that rate_ != 0, we don't need to check for division by 0
@@ -80,11 +86,13 @@ impl NumberPeriod {
         // return log((-fv_ + z) / (pv_ + z)) / log(1.0 + rate_)
         let when_f64 = self.when.clone() as u8 as f64;
         let z = self.pmt * (1.0 + self.rate * when_f64) / self.rate;
-        Some(((-self.fv + z) / (self.pv + z)).ln() / (1.0 + self.rate).ln())
+        Ok(Some(
+            ((-self.fv + z) / (self.pv + z)).ln() / (1.0 + self.rate).ln(),
+        ))
     }
 
     /// Get the number of periodic payments from an instance of `NumberPeriod`
-    pub fn get(&self) -> Option<f64> {
+    pub fn get(&self) -> Result<Option<f64>> {
         self.nper()
     }
 }
@@ -97,7 +105,7 @@ mod tests {
     #[test]
     fn test_nper_from_tuple() {
         let nper = NumberPeriod::from_tuple((0.075, -2000.0, 0.0, 100000.0, WhenType::End));
-        let res = nper.get().unwrap();
+        let res = nper.get().unwrap().unwrap();
         let tgt = 21.544944;
 
         assert!(
@@ -119,9 +127,9 @@ mod tests {
         map.insert("fv".into(), ParaType::F64(100000.0));
         map.insert("when".into(), ParaType::When(WhenType::End));
 
-        let nper = NumberPeriod::from_map(map);
+        let nper = NumberPeriod::from_map(map).unwrap();
 
-        let res = nper.get().unwrap();
+        let res = nper.get().unwrap().unwrap();
         let tgt = 21.544944;
 
         assert!(
@@ -137,7 +145,7 @@ mod tests {
     #[test]
     fn test_nper_zero_rate_nonzero_pmt() {
         let nper = NumberPeriod::from_tuple((0.0, -2000.0, 0.0, 100000.0, WhenType::End));
-        let res = nper.get().unwrap();
+        let res = nper.get().unwrap().unwrap();
         let tgt = 50.0;
 
         assert!(
@@ -151,7 +159,7 @@ mod tests {
     #[test]
     fn test_nper_zero_rate_zero_pmt() {
         let nper = NumberPeriod::from_tuple((0.0, 0.0, 0.0, 100000.0, WhenType::End));
-        let res = nper.get().unwrap();
+        let res = nper.get().unwrap().unwrap();
         let tgt = f64::INFINITY;
 
         assert_eq!(res, tgt, "{:#?} v.s. {:#?}", res, tgt);
@@ -160,9 +168,41 @@ mod tests {
     #[test]
     fn test_nper_lt_negative_one_rate() {
         let nper = NumberPeriod::from_tuple((-10.0, 0.0, 0.0, 100000.0, WhenType::End));
-        let res = nper.get();
+        let res = nper.get().unwrap();
         let tgt = None;
 
         assert_eq!(res, tgt, "{:#?} v.s. {:#?}", res, tgt);
+    }
+
+    #[test]
+    fn test_nper_err() {
+        let mut map = ParaMap::new();
+        map.insert("Rate".into(), ParaType::F64(0.075));
+        map.insert("pmt".into(), ParaType::F64(-2000.0));
+        map.insert("pv".into(), ParaType::F64(0.0));
+        map.insert("fv".into(), ParaType::F64(100000.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+
+        let nper = NumberPeriod::from_map(map);
+
+        let cond = nper.is_err();
+        assert!(cond);
+    }
+
+    #[test]
+    #[ignore = "need to figure out how to produce nan"]
+    fn test_nper_nan() {
+        let mut map = ParaMap::new();
+        map.insert("rate".into(), ParaType::F64(f64::MAX));
+        map.insert("pmt".into(), ParaType::F64(-2000.0));
+        map.insert("pv".into(), ParaType::F64(0.0));
+        map.insert("fv".into(), ParaType::F64(100000.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+
+        let nper = NumberPeriod::from_map(map).unwrap();
+
+        // need to figure out how to produce nan
+        let cond = nper.get().unwrap().unwrap().is_nan();
+        assert!(cond);
     }
 }

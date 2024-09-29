@@ -1,4 +1,4 @@
-use crate::{get_f64, get_vecf64, ParaMap};
+use crate::{get_f64, get_vecf64, Error, ParaMap, Result};
 
 /// # Compute the net present value of a cash flow, given an interest rate
 
@@ -34,13 +34,19 @@ impl NetPresentValue {
 
     /// Instantiate a `NetPresentValue ` instance from a hash map with keys of (`values`, `rate`) in said order
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
-    pub fn from_map(map: ParaMap) -> Self {
-        let values = get_vecf64(&map, "values").unwrap();
-        let rate = get_f64(&map, "rate").unwrap();
-        NetPresentValue { values, rate }
+    pub fn from_map(map: ParaMap) -> Result<Self> {
+        let op = |err: Error| {
+            Error::OtherError(format!(
+                "Failed construct an instance of `NetPresentValue` from: `{:?}` <- {}",
+                map, err
+            ))
+        };
+        let values = get_vecf64(&map, "values").map_err(|err| op(err))?;
+        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
+        Ok(NetPresentValue { values, rate })
     }
 
-    fn npv(&self) -> f64 {
+    fn npv(&self) -> Result<f64> {
         let npv: f64 = self
             .values
             .iter()
@@ -51,10 +57,10 @@ impl NetPresentValue {
             })
             .sum();
 
-        npv
+        Ok(npv)
     }
 
-    pub fn get(&self) -> f64 {
+    pub fn get(&self) -> Result<f64> {
         self.npv()
     }
 }
@@ -70,7 +76,7 @@ mod tests {
         // 122.89485495093959
         let tup = (vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0], 0.05);
         let npv = NetPresentValue::from_tuple(tup);
-        let res = npv.get();
+        let res = npv.get().unwrap();
         let tgt = 122.89485495093959;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -91,7 +97,7 @@ mod tests {
         map.insert("rate".to_string(), ParaType::F64(0.05));
 
         let npv = NetPresentValue::from_map(map);
-        let res = npv.get();
+        let res = npv.unwrap().get().unwrap();
         let tgt = 122.89485495093959;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -107,7 +113,7 @@ mod tests {
         // 122.89485495093959
         let tup = (vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0], 0.0);
         let npv = NetPresentValue::from_tuple(tup);
-        let res = npv.get();
+        let res = npv.get().unwrap();
         let tgt = 3000.0;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
@@ -115,5 +121,18 @@ mod tests {
             res,
             tgt
         );
+    }
+
+    #[test]
+    fn test_npv_err() {
+        let values = vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0];
+
+        let mut map = ParaMap::new();
+        map.insert("Values".to_string(), ParaType::VecF64(values));
+        map.insert("rate".to_string(), ParaType::F64(0.05));
+
+        let npv = NetPresentValue::from_map(map);
+        let cond = npv.is_err();
+        assert!(cond);
     }
 }
