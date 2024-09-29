@@ -76,7 +76,8 @@ impl InterestPayment {
 
         // total payment
         let total_pmt =
-            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when.clone())).get();
+            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when.clone()))
+                .get()?;
         // remaining balance
         // only consider per > 1, i.e. starting from 1st payment
         let impt = if self.per >= 1 {

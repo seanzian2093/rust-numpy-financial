@@ -1,4 +1,6 @@
-use crate::{get_f64, get_u32, get_when, InterestPayment, ParaMap, Payment, Result, WhenType};
+use crate::{
+    get_f64, get_u32, get_when, Error, InterestPayment, ParaMap, Payment, Result, WhenType,
+};
 /// # Compute the payment against loan principal
 
 /// ## Parameters
@@ -44,21 +46,28 @@ impl PrincipalPayment {
 
     /// Instantiate a `PrincipalPayment` instance from a hash map with keys of (`rate`, `per`, `nper`,`pv`, `fv`, and `when`) in said order
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
-    pub fn from_map(map: ParaMap) -> Self {
-        let rate = get_f64(&map, "rate").unwrap();
-        let per = get_u32(&map, "per").unwrap();
-        let nper = get_u32(&map, "nper").unwrap();
-        let pv = get_f64(&map, "pv").unwrap();
-        let fv = get_f64(&map, "fv").unwrap();
-        let when = get_when(&map, "when").unwrap();
-        PrincipalPayment {
+    pub fn from_map(map: ParaMap) -> Result<Self> {
+        let op = |err: Error| {
+            Error::OtherError(format!(
+                "Failed construct an instance of `PrincipalPayment` from: `{:?}` <- {}",
+                map, err
+            ))
+        };
+
+        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
+        let per = get_u32(&map, "per").map_err(|err| op(err))?;
+        let nper = get_u32(&map, "nper").map_err(|err| op(err))?;
+        let pv = get_f64(&map, "pv").map_err(|err| op(err))?;
+        let fv = get_f64(&map, "fv").map_err(|err| op(err))?;
+        let when = get_when(&map, "when").map_err(|err| op(err))?;
+        Ok(PrincipalPayment {
             rate,
             per,
             nper,
             pv,
             fv,
             when,
-        }
+        })
     }
 
     fn ppmt(&self) -> Result<Option<f64>> {
@@ -69,7 +78,8 @@ impl PrincipalPayment {
 
         // total payment
         let total_pmt =
-            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when.clone())).get();
+            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when.clone()))
+                .get()?;
         // interest payment
         let ipmt = InterestPayment::from_tuple((
             self.rate,
@@ -124,7 +134,7 @@ mod tests {
         map.insert("pv".into(), ParaType::F64(55000.0));
         map.insert("fv".into(), ParaType::F64(0.0));
         map.insert("when".into(), ParaType::When(WhenType::End));
-        let ppmt = PrincipalPayment::from_map(map);
+        let ppmt = PrincipalPayment::from_map(map).unwrap();
         // npf.ppmt(0.1 / 12, 1, 60, 55000)
         // -710.254125786425
         let res = ppmt.get().unwrap().unwrap();
@@ -215,5 +225,19 @@ mod tests {
         let res = ppmt.get().unwrap();
         let tgt = None;
         assert_eq!(res, tgt, "{:#?} v.s. {:#?}", res, tgt);
+    }
+
+    #[test]
+    fn test_ppmt_err() {
+        let mut map = ParaMap::new();
+        map.insert("Rate".into(), ParaType::F64(0.1 / 12.0));
+        map.insert("per".into(), ParaType::U32(1));
+        map.insert("nper".into(), ParaType::U32(60));
+        map.insert("pv".into(), ParaType::F64(55000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        let ppmt = PrincipalPayment::from_map(map);
+        let cond = ppmt.is_err();
+        assert!(cond);
     }
 }

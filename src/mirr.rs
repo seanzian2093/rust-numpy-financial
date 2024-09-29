@@ -1,4 +1,4 @@
-use crate::{get_f64, get_vecf64, ParaMap};
+use crate::{get_f64, get_vecf64, Error, ParaMap, Result};
 
 /// # Compute the Modified Internal Rate of Return (MIRR)
 
@@ -40,23 +40,30 @@ impl ModifiedIRR {
 
     /// Instantiate a `ModifiedIRR` instance from a hash map with keys of (`values`, `finance_rate`, `reinvest_rate`) in said order
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
-    pub fn from_map(map: ParaMap) -> Self {
-        let values = get_vecf64(&map, "values").unwrap();
-        let finance_rate = get_f64(&map, "finance_rate").unwrap();
-        let reinvest_rate = get_f64(&map, "reinvest_rate").unwrap();
-        ModifiedIRR {
+    pub fn from_map(map: ParaMap) -> Result<Self> {
+        let op = |err: Error| {
+            Error::OtherError(format!(
+                "Failed construct an instance of `ModifiedIRR` from: `{:?}` <- {}",
+                map, err
+            ))
+        };
+
+        let values = get_vecf64(&map, "values").map_err(|err| op(err))?;
+        let finance_rate = get_f64(&map, "finance_rate").map_err(|err| op(err))?;
+        let reinvest_rate = get_f64(&map, "reinvest_rate").map_err(|err| op(err))?;
+        Ok(ModifiedIRR {
             values,
             finance_rate,
             reinvest_rate,
-        }
+        })
     }
 
-    fn mirr(&self) -> Option<f64> {
+    fn mirr(&self) -> Result<Option<f64>> {
         let any_negative = self.values.iter().any(|&v| v <= 0.0);
         let any_positive = self.values.iter().any(|&v| v > 0.0);
         if !(any_negative & any_positive) {
             println!("No real solution exists for MIRR since  all cashflows are of the same sign.");
-            None
+            Ok(None)
         } else {
             // v * neg
             let neg_pmts: Vec<f64> = self
@@ -64,7 +71,6 @@ impl ModifiedIRR {
                 .iter()
                 .map(|&rf| if rf < 0.0 { rf } else { 0.0 })
                 .collect();
-            println!("{:?}", neg_pmts);
 
             // v * pos
             let pos_pmts: Vec<f64> = self
@@ -72,28 +78,26 @@ impl ModifiedIRR {
                 .iter()
                 .map(|&rf| if rf > 0.0 { rf } else { 0.0 })
                 .collect();
-            println!("{:?}", pos_pmts);
 
             // numer = np.abs(npv(rr, v * pos))
             let numer = crate::NetPresentValue::from_tuple((pos_pmts, self.reinvest_rate))
-                .get()
+                .get()?
                 .abs();
-            println!("{numer}");
+
             // denom = np.abs(npv(fr, v * neg))
             let denom = crate::NetPresentValue::from_tuple((neg_pmts, self.finance_rate))
-                .get()
+                .get()?
                 .abs();
-            println!("{denom}");
 
             // (numer / denom) ** (1 / (n - 1)) * (1 + rr) - 1
             let n = self.values.len() as f64;
             let mirr = (numer / denom).powf(1.0 / (n - 1.0)) * (1.0 + self.reinvest_rate) - 1.0;
-            Some(mirr)
+            Ok(Some(mirr))
         }
     }
 
     /// Get the `mirr` from an instance of `ModifiedIRR`
-    pub fn get(&self) -> Option<f64> {
+    pub fn get(&self) -> Result<Option<f64>> {
         self.mirr()
     }
 }
@@ -126,7 +130,7 @@ mod tests {
         let tgt = 0.3428233878421769;
 
         let mirr = ModifiedIRR::from_tuple(tup);
-        let res = mirr.get().unwrap();
+        let res = mirr.get().unwrap().unwrap();
         assert!(
             float_close(res, tgt, RTOL, ATOL),
             "{:#?} v.s. {:#?}",
@@ -148,8 +152,8 @@ mod tests {
 
         let tgt = 0.3428233878421769;
 
-        let mirr = ModifiedIRR::from_map(map);
-        let res = mirr.get().unwrap();
+        let mirr = ModifiedIRR::from_map(map).unwrap();
+        let res = mirr.get().unwrap().unwrap();
         assert!(
             float_close(res, tgt, RTOL, ATOL),
             "{:#?} v.s. {:#?}",
@@ -165,8 +169,39 @@ mod tests {
             0.10,
             0.12,
         ));
-        let res = mirr.get();
+        let res = mirr.get().unwrap();
         let tgt = None;
         assert_eq!(res, tgt, "{:#?} v.s. {:#?}", res, tgt)
+    }
+
+    #[test]
+    fn test_mirr_err() {
+        let tup = (vec![100.0, 200.0, -50.0, 300.00, -200.0], 0.05, 0.06);
+        let mut map = ParaMap::new();
+        map.insert("Values".to_string(), ParaType::VecF64(tup.0));
+        map.insert("finance_rate".to_string(), ParaType::F64(tup.1));
+        map.insert("reinvest_rate".to_string(), ParaType::F64(tup.2));
+
+        let mirr = ModifiedIRR::from_map(map);
+        let cond = mirr.is_err();
+        assert!(cond);
+    }
+
+    #[test]
+    #[ignore = "need to figure what is this case"]
+    fn test_mirr_nan() {
+        let tup = (
+            vec![100.0, 200.0, -50.0, 300.00, -200.0],
+            f64::MAX,
+            f64::MAX,
+        );
+        let mut map = ParaMap::new();
+        map.insert("values".to_string(), ParaType::VecF64(tup.0));
+        map.insert("finance_rate".to_string(), ParaType::F64(tup.1));
+        map.insert("reinvest_rate".to_string(), ParaType::F64(tup.2));
+
+        let mirr = ModifiedIRR::from_map(map);
+        let cond = mirr.unwrap().get().unwrap().unwrap().is_nan();
+        assert!(cond);
     }
 }
