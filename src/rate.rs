@@ -1,4 +1,5 @@
-use crate::{get_f64, get_u32, get_when, util::WhenType, Error, ParaMap, Result};
+use log::debug;
+use crate::{Error, ParaMap, Result, get_f64, get_u32, get_when, util::WhenType, FromTuple, FromMap};
 /// # Compute the interest rate
 /// ## Parameters
 /// * `nper` : number of compounding periods
@@ -16,7 +17,7 @@ use crate::{get_f64, get_u32, get_when, util::WhenType, Error, ParaMap, Result};
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
-/// let rate = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100));
+/// let rate = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100)).expect("Error creating Rate");
 /// println!("{:#?}'s rate is {:#?}", rate, rate.get());
 /// ```
 ///
@@ -34,8 +35,8 @@ pub struct Rate {
 
 impl Rate {
     /// Instantiate a `Rate` instance from a tuple of (`nper`, `pmt`, `pv`, `fv`, `when`, `guess`, `tol`, `maxiter`) in said order
-    pub fn from_tuple(tup: (u32, f64, f64, f64, WhenType, f64, f64, u32)) -> Self {
-        Rate {
+    pub fn from_tuple(tup: (u32, f64, f64, f64, WhenType, f64, f64, u32)) -> Result<Self> {
+        Ok(Rate {
             nper: tup.0,
             pmt: tup.1,
             pv: tup.2,
@@ -44,7 +45,7 @@ impl Rate {
             guess: tup.5,
             tol: tup.6,
             maxiter: tup.7,
-        }
+        })
     }
 
     /// Instantiate a `Rate` instance from a hash map with keys of (`nper`, `pmt`, `pv`, `fv`, `when`, `guess`, `tol`, `maxiter`) in said order
@@ -113,9 +114,8 @@ impl Rate {
         let mut iter: u32 = 0;
         let mut close = false;
 
-        while (iter < self.maxiter) & (!close) {
-            let rnp1 =
-                rn - Self::_g_div_gp(rn, self.nper, self.pmt, self.pv, self.fv, self.when.clone());
+        while (iter < self.maxiter) && (!close) {
+            let rnp1 = rn - Self::_g_div_gp(rn, self.nper, self.pmt, self.pv, self.fv, self.when);
             let diff = (rnp1 - rn).abs();
             close = diff < self.tol;
             iter += 1;
@@ -124,11 +124,11 @@ impl Rate {
 
         // if convergence
         if close {
-            println!("Converged - {}, at: {}", rn, iter);
+            debug!("Converged - {}, at: {}", rn, iter);
             Ok(Some(rn))
         // if no convergence after maxiter
         } else {
-            println!("Maximum iterations reached - {}, at: {}", self.maxiter, rn);
+            debug!("Maximum iterations reached - {}, at: {}", self.maxiter, rn);
             Ok(None)
         }
     }
@@ -139,14 +139,25 @@ impl Rate {
     }
 }
 
-#[allow(unused_imports)]
+impl FromTuple<(u32, f64, f64, f64, WhenType, f64, f64, u32)> for Rate {
+    fn from_tuple(tup: (u32, f64, f64, f64, WhenType, f64, f64, u32)) -> Result<Self> {
+        Rate::from_tuple(tup)
+    }
+}
+
+impl FromMap for Rate {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        Rate::from_map(map)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
 
     #[test]
     fn test_rate_from_tuple() {
-        let rate = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100));
+        let rate = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100)).unwrap();
         // npf.rate(10, 0, -3500, 10000)
         // 0.11069085371426901
         let res = rate.get().unwrap().unwrap();

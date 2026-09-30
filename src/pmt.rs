@@ -1,4 +1,4 @@
-use crate::{get_f64, get_u32, get_when, Error, ParaMap, Result, WhenType};
+use crate::{Error, FromMap, FromTuple, ParaMap, Result, WhenType, get_f64, get_u32, get_when};
 /// # Compute the payment against loan principal plus interest
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
@@ -13,7 +13,7 @@ use crate::{get_f64, get_u32, get_when, Error, ParaMap, Result, WhenType};
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
-/// let pmt = Payment::from_tuple((0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End));
+/// let pmt = Payment::from_tuple((0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End)).expect("Error creating Payment");
 /// println!("{:#?}'s pmt is {:?}", pmt, pmt.get());
 /// ```
 #[derive(Debug)]
@@ -27,14 +27,14 @@ pub struct Payment {
 
 impl Payment {
     /// Instantiate a `Payment` instance from a tuple of (`rate`, `nper`, `pv`, `fv` and `when`) in said order
-    pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Self {
-        Payment {
+    pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Result<Self> {
+        Ok(Payment {
             rate: tup.0,
             nper: tup.1,
             pv: tup.2,
             fv: tup.3,
             when: tup.4,
-        }
+        })
     }
 
     /// Instantiate a `Payment` instance from a hash map with keys of (`rate`, `nper`, `pv`, `fv`, and `when`) in said order
@@ -71,7 +71,7 @@ impl Payment {
         if self.rate != 0.0 {
             let tmp = (1.0 + self.rate).powf(self.nper as f64);
             let pv_future = self.pv * tmp;
-            let when_f64 = self.when.clone() as u8 as f64;
+            let when_f64 = self.when as u8 as f64;
             let fact = (1.0 + self.rate * when_f64) / self.rate * (tmp - 1.0);
             Ok(-(self.fv + pv_future) / fact)
         } else {
@@ -85,14 +85,25 @@ impl Payment {
     }
 }
 
-#[allow(unused_imports)]
+impl FromTuple<(f64, u32, f64, f64, WhenType)> for Payment {
+    fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Result<Self> {
+        Payment::from_tuple(tup)
+    }
+}
+
+impl FromMap for Payment {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        Payment::from_map(map)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::*;
+    use crate::{float_close, ATOL, RTOL, WhenType, Payment, ParaType, ParaMap};
 
     #[test]
     fn test_pmt_from_tuple() {
-        let pmt = Payment::from_tuple((0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End));
+        let pmt = Payment::from_tuple((0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End)).unwrap();
 
         let res = pmt.get().unwrap();
         let tgt = -304.145914;

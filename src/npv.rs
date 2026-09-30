@@ -1,4 +1,4 @@
-use crate::{get_f64, get_vecf64, Error, ParaMap, Result};
+use crate::{Error, FromMap, FromTuple, ParaMap, Result, get_f64, get_vecf64};
 
 /// # Compute the net present value of a cash flow, given an interest rate
 /// ## Parameters
@@ -12,7 +12,7 @@ use crate::{get_f64, get_vecf64, Error, ParaMap, Result};
 /// ```rust
 /// use rfinancial::*;
 /// let tup = (vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0], 0.05);
-/// let npv = NetPresentValue::from_tuple(tup);
+/// let npv = NetPresentValue::from_tuple(tup).expect("Error creating NPV");
 /// println!("{:#?}'s npv is {:?}", npv, npv.get());
 /// ```
 #[derive(Debug)]
@@ -22,16 +22,25 @@ pub struct NetPresentValue {
 }
 
 impl NetPresentValue {
-    /// Instantiate a `ModifiedIRR` instance from a vec of (`values`, `rate`) in said order
-    pub fn from_tuple(tup: (Vec<f64>, f64)) -> Self {
-        NetPresentValue {
+    /// Instantiate a `NetPresentValue` instance from a vec of (`values`, `rate`) in said order
+    ///
+    /// # Errors
+    /// Returns `ParaError` if `values` is empty
+    pub fn from_tuple(tup: (Vec<f64>, f64)) -> Result<Self> {
+        if tup.0.is_empty() {
+            return Err(Error::ParaError("values must not be empty".to_string()));
+        }
+        Ok(NetPresentValue {
             values: tup.0,
             rate: tup.1,
-        }
+        })
     }
 
     /// Instantiate a `NetPresentValue ` instance from a hash map with keys of (`values`, `rate`) in said order
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    ///
+    /// # Errors
+    /// Returns error if map extraction or validation fails
     pub fn from_map(map: ParaMap) -> Result<Self> {
         let op = |err: Error| {
             Error::OtherError(format!(
@@ -41,7 +50,8 @@ impl NetPresentValue {
         };
         let values = get_vecf64(&map, "values").map_err(&op)?;
         let rate = get_f64(&map, "rate").map_err(op)?;
-        Ok(NetPresentValue { values, rate })
+        Self::from_tuple((values, rate))
+            .map_err(|e| Error::OtherError(format!("NPV validation failed: {}", e)))
     }
 
     fn npv(&self) -> Result<f64> {
@@ -63,7 +73,18 @@ impl NetPresentValue {
     }
 }
 
-#[allow(unused_imports)]
+impl FromTuple<(Vec<f64>, f64)> for NetPresentValue {
+    fn from_tuple(tup: (Vec<f64>, f64)) -> Result<Self> {
+        NetPresentValue::from_tuple(tup)
+    }
+}
+
+impl FromMap for NetPresentValue {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        NetPresentValue::from_map(map)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -73,7 +94,7 @@ mod tests {
         // npf.npv(0.05, [-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0])
         // 122.89485495093959
         let tup = (vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0], 0.05);
-        let npv = NetPresentValue::from_tuple(tup);
+        let npv = NetPresentValue::from_tuple(tup).unwrap();
         let res = npv.get().unwrap();
         let tgt = 122.89485495093959;
         assert!(
@@ -110,7 +131,7 @@ mod tests {
         // npf.npv(0.05, [-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0])
         // 122.89485495093959
         let tup = (vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0], 0.0);
-        let npv = NetPresentValue::from_tuple(tup);
+        let npv = NetPresentValue::from_tuple(tup).unwrap();
         let res = npv.get().unwrap();
         let tgt = 3000.0;
         assert!(

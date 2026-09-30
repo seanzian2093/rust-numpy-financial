@@ -1,4 +1,4 @@
-use crate::{float_close, get_vecf64, Error, ParaMap, Result, ATOL, RTOL};
+use crate::{ATOL, Error, FromMap, FromTuple, ParaMap, RTOL, Result, float_close, get_vecf64};
 /// # Compute the Internal Rate of Return (IRR)
 /// This is the "average" periodically compounded rate of return that gives a net present value of 0.0
 /// ## Parameters
@@ -13,7 +13,7 @@ use crate::{float_close, get_vecf64, Error, ParaMap, Result, ATOL, RTOL};
 /// ```rust
 /// use rfinancial::*;
 /// let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
-/// let irr = InternalRateReturn::from_vec(values);
+/// let irr = InternalRateReturn::from_vec(values).expect("Error creating IRR");
 /// println!("{:#?}'s irr is {:?}", irr, irr.get());
 /// ```
 /// ## Caveat
@@ -27,14 +27,36 @@ pub struct InternalRateReturn {
 
 impl InternalRateReturn {
     /// Instantiate an `InternalRateReturn` instance from a vector of `f64`
-    pub fn from_vec(values: Vec<f64>) -> Self {
-        // vec must at lease be of 2 elements
-        // - to raise error in future not delegat to `irr`
-        InternalRateReturn { values }
+    ///
+    /// # Errors
+    /// Returns `ParaError` if:
+    /// - `values` has fewer than 2 elements
+    /// - `values` contains only positive or only negative values (IRR requires both)
+    pub fn from_vec(values: Vec<f64>) -> Result<Self> {
+        if values.len() < 2 {
+            return Err(Error::ParaError(
+                "values must contain at least 2 elements".to_string(),
+            ));
+        }
+
+        let has_positive = values.iter().any(|&v| v > 0.0);
+        let has_negative = values.iter().any(|&v| v < 0.0);
+
+        if !has_positive || !has_negative {
+            return Err(Error::ParaError(
+                "values must contain both positive and negative values for IRR to exist"
+                    .to_string(),
+            ));
+        }
+
+        Ok(InternalRateReturn { values })
     }
 
     /// Instantiate a `InterestPayment` instance from a hash map with keys of (`values`)
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    ///
+    /// # Errors
+    /// Returns error if values cannot be extracted from map or validation fails
     pub fn from_map(map: ParaMap) -> Result<Self> {
         let op = |err: Error| {
             Error::OtherError(format!(
@@ -43,7 +65,8 @@ impl InternalRateReturn {
             ))
         };
         let values = get_vecf64(&map, "values").map_err(op)?;
-        Ok(InternalRateReturn { values })
+        Self::from_vec(values)
+            .map_err(|e| Error::OtherError(format!("IRR validation failed: {}", e)))
     }
 
     fn fx(v: &[f64], x: f64) -> Result<f64> {
@@ -103,55 +126,10 @@ impl InternalRateReturn {
         Ok(None)
     }
 
-    // fina all possible roots- not used
-    fn _find_roots(v: &[f64]) -> Result<Vec<f64>> {
-        // to re-implement
-        let mut x = -10.0;
-        let mut iter = 0;
-        let mut roots = Vec::<f64>::new();
-        while iter < 100 {
-            // f
-            let f = Self::fx(v, x)?;
-            // d
-            let d = Self::dx(v, x)?;
-            // d is 0, update x and continue
-            if float_close(d, 0.0, RTOL, ATOL) {
-                x += 1.0;
-                iter += 1;
-                continue;
-            };
-
-            // x1
-            let x1 = x - f / d;
-
-            // if x and x1 are close enough return
-            if float_close(x, x1, RTOL, ATOL) {
-                roots.push(x1);
-            };
-
-            // otherwise continue the loop
-            // update x and iter
-            x = x1;
-            iter += 1;
-        }
-
-        // if maximum iteration reached, return roots or None
-        Ok(roots)
-    }
-
     fn irr(&self) -> Result<Option<f64>> {
-        // vec must at lease be of 2 elements
-        // - for now check at this function
-        if self.values.len() <= 1 {
-            return Ok(None);
-        };
-        // if signs of all elements of `values` are same, there is no solution
-        let all_negative = self.values.iter().all(|&v| v <= 0.0);
-        // - including all 0s
-        let all_positive = self.values.iter().all(|&v| v > 0.0);
-        if all_negative | all_positive {
-            return Ok(None);
-        };
+        // Validation is already done in from_vec(), so we can assume:
+        // - values.len() >= 2
+        // - values contains both positive and negative values
 
         // Otherwise we are set to find irr
 
@@ -186,7 +164,18 @@ impl InternalRateReturn {
     }
 }
 
-#[allow(unused_imports)]
+impl FromTuple<Vec<f64>> for InternalRateReturn {
+    fn from_tuple(values: Vec<f64>) -> Result<Self> {
+        InternalRateReturn::from_vec(values)
+    }
+}
+
+impl FromMap for InternalRateReturn {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        InternalRateReturn::from_map(map)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -238,7 +227,11 @@ mod tests {
         // npf.irr([-150000, 15000, 25000, 35000, 45000, 60000])
         // 0.052432888859413884
         let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
-        let res = InternalRateReturn::from_vec(values).get().unwrap().unwrap();
+        let res = InternalRateReturn::from_vec(values)
+            .unwrap()
+            .get()
+            .unwrap()
+            .unwrap();
         let tgt = 0.052432888859413884;
         assert!(
             float_close(res, tgt, RTOL, ATOL),

@@ -1,5 +1,6 @@
 use crate::{
-    get_f64, get_u32, get_when, Error, InterestPayment, ParaMap, Payment, Result, WhenType,
+    Error, FromMap, FromTuple, InterestPayment, ParaMap, Payment, Result, WhenType, get_f64,
+    get_u32, get_when,
 };
 /// # Compute the payment against loan principal
 /// ## Parameters
@@ -16,7 +17,7 @@ use crate::{
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
-/// let ppmt = PrincipalPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End));
+/// let ppmt = PrincipalPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End)).expect("Error creating PrincipalPayment");
 /// println!("{:#?}'s ppmt is {:?}", ppmt, ppmt.get());
 /// ```
 #[derive(Debug)]
@@ -31,15 +32,15 @@ pub struct PrincipalPayment {
 
 impl PrincipalPayment {
     /// Instantiate a `PrincipalPayment` instance from a tuple of (`rate`, `per`, `nper`, `pv`, `fv` and `when`) in said order
-    pub fn from_tuple(tup: (f64, u32, u32, f64, f64, WhenType)) -> Self {
-        PrincipalPayment {
+    pub fn from_tuple(tup: (f64, u32, u32, f64, f64, WhenType)) -> Result<Self> {
+        Ok(PrincipalPayment {
             rate: tup.0,
             per: tup.1,
             nper: tup.2,
             pv: tup.3,
             fv: tup.4,
             when: tup.5,
-        }
+        })
     }
 
     /// Instantiate a `PrincipalPayment` instance from a hash map with keys of (`rate`, `per`, `nper`,`pv`, `fv`, and `when`) in said order
@@ -76,17 +77,11 @@ impl PrincipalPayment {
 
         // total payment
         let total_pmt =
-            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when.clone()))
-                .get()?;
+            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when))?.get()?;
         // interest payment
         let ipmt = InterestPayment::from_tuple((
-            self.rate,
-            self.per,
-            self.nper,
-            self.pv,
-            self.fv,
-            self.when.clone(),
-        ))
+            self.rate, self.per, self.nper, self.pv, self.fv, self.when,
+        ))?
         .get()?;
 
         let ppmt = ipmt.map(|value| total_pmt - value);
@@ -99,15 +94,24 @@ impl PrincipalPayment {
         self.ppmt()
     }
 }
+impl FromTuple<(f64, u32, u32, f64, f64, WhenType)> for PrincipalPayment {
+    fn from_tuple(tup: (f64, u32, u32, f64, f64, WhenType)) -> Result<Self> {
+        PrincipalPayment::from_tuple(tup)
+    }
+}
 
-#[allow(unused_imports)]
+impl FromMap for PrincipalPayment {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        PrincipalPayment::from_map(map)
+    }
+}
 #[cfg(test)]
 mod tests {
     use crate::*;
 
     #[test]
     fn test_ppmt_from_tuple() {
-        let ppmt = PrincipalPayment::from_tuple((0.1 / 12.0, 1, 60, 55000.0, 0.0, WhenType::End));
+        let ppmt = PrincipalPayment::from_tuple((0.1 / 12.0, 1, 60, 55000.0, 0.0, WhenType::End)).unwrap();
         // npf.ppmt(0.1 / 12, 1, 60, 55000)
         // -710.254125786425
         let res = ppmt.get().unwrap().unwrap();

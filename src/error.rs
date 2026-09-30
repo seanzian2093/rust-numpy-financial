@@ -1,24 +1,20 @@
-use core::fmt;
+use thiserror::Error;
 
 // Customized Result
 pub type Result<T> = std::result::Result<T, Error>;
 
-// Customized Error
-#[derive(Debug)]
+/// Error types for the rfinancial crate
+#[derive(Debug, Error)]
 pub enum Error {
+    /// Parameter validation error
+    #[error("Parameter error: {0}")]
     ParaError(String),
+
+    /// Constructor error
+    #[error("Constructor error: {0}")]
     ConstructorError(String),
+
+    /// Other errors
+    #[error("Error: {0}")]
     OtherError(String),
 }
-
-// Parameter Error
-#[derive(Debug)]
-pub struct ParaError;
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(fmt, "{:?}", self)
-    }
-}
-
-impl std::error::Error for Error {}

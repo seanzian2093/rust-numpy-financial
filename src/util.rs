@@ -6,13 +6,20 @@ pub const ATOL: f64 = 1e-5;
 
 /// To compare if two `f64` are close enough to be treated as `equal`
 pub fn float_close(lhs: f64, rhs: f64, rtol: f64, atol: f64) -> bool {
-    let cond1 = ((lhs - rhs) / rhs).abs() <= rtol;
+    // Handle zero case
+    if rhs == 0.0 {
+        return (lhs - rhs).abs() <= atol;
+    }
+    
+    // Relative tolerance
+    let cond1 = ((lhs - rhs) / rhs.abs()).abs() <= rtol;
+    // Absolute tolerance
     let cond2 = (lhs - rhs).abs() <= atol;
-
-    cond1 | cond2
+    
+    cond1 || cond2
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 /// when payments are due in a payment period
 pub enum WhenType {
     End = 0,
@@ -48,7 +55,7 @@ pub fn get_u32(map: &ParaMap, field: &str) -> Result<u32> {
 
 pub fn get_when(map: &ParaMap, field: &str) -> Result<WhenType> {
     if let Some(ParaType::When(v)) = map.get(field) {
-        Ok(v.clone())
+        Ok(*v)
     } else {
         Err(Error::ParaError(format!("{}: WhenType", field)))
     }
@@ -60,4 +67,14 @@ pub fn get_vecf64(map: &ParaMap, field: &str) -> Result<Vec<f64>> {
     } else {
         Err(Error::ParaError(format!("{}: VecF64", field)))
     }
+}
+
+/// Trait for constructing types from tuples
+pub trait FromTuple<T>: Sized {
+    fn from_tuple(tup: T) -> Result<Self>;
+}
+
+/// Trait for constructing types from parameter maps
+pub trait FromMap: Sized {
+    fn from_map(map: ParaMap) -> Result<Self>;
 }

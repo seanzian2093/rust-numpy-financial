@@ -1,4 +1,6 @@
-use crate::{get_f64, get_u32, get_when, util::WhenType, Error, ParaMap, Result};
+use crate::{
+    Error, FromMap, FromTuple, ParaMap, Result, get_f64, get_u32, get_when, util::WhenType,
+};
 /// # Compute the present value
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
@@ -13,7 +15,7 @@ use crate::{get_f64, get_u32, get_when, util::WhenType, Error, ParaMap, Result};
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
-/// let pv = PresentValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
+/// let pv = PresentValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End)).expect("Error creating PresentValue");
 /// println!("{:#?}'s pv is {:?}", pv, pv.get());
 /// ```
 #[derive(Debug)]
@@ -27,14 +29,14 @@ pub struct PresentValue {
 
 impl PresentValue {
     /// Instantiate a `PresentValue` instance from a tuple of (`rate`, `nper`, `pmt`, `fv` and `when`) in said order
-    pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Self {
-        PresentValue {
+    pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Result<Self> {
+        Ok(PresentValue {
             rate: tup.0,
             nper: tup.1,
             pmt: tup.2,
             fv: tup.3,
             when: tup.4,
-        }
+        })
     }
 
     /// Instantiate a `PresentValue` instance from a hash map with keys of (`rate`, `nper`,`pmt`, `fv`, and `when`) in said order
@@ -70,7 +72,7 @@ impl PresentValue {
         */
         if self.rate != 0.0 {
             let temp = (1.0 + self.rate).powf(self.nper as f64);
-            let when_f64 = self.when.clone() as u8 as f64;
+            let when_f64 = self.when as u8 as f64;
             let fact = (1.0 + self.rate * when_f64) * (temp - 1.0) / self.rate;
             Ok(-(self.fv + self.pmt * fact) / temp)
         } else {
@@ -84,14 +86,25 @@ impl PresentValue {
     }
 }
 
-#[allow(unused_imports)]
+impl FromTuple<(f64, u32, f64, f64, WhenType)> for PresentValue {
+    fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Result<Self> {
+        PresentValue::from_tuple(tup)
+    }
+}
+
+impl FromMap for PresentValue {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        PresentValue::from_map(map)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
 
     #[test]
     fn test_pv_from_tuple() {
-        let pv = PresentValue::from_tuple((0.07, 20, 12000.0, 0.0, WhenType::End));
+        let pv = PresentValue::from_tuple((0.07, 20, 12000.0, 0.0, WhenType::End)).unwrap();
 
         // npf.pv(0.07, 20, 12000, 0)
         // -127128.17

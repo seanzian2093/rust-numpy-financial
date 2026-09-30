@@ -1,4 +1,4 @@
-use crate::{get_f64, get_u32, get_when, Error, ParaMap, Result, WhenType};
+use crate::{get_f64, get_u32, get_when, Error, ParaMap, Result, WhenType, FromTuple, FromMap};
 /// # Compute the future value
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
@@ -13,7 +13,7 @@ use crate::{get_f64, get_u32, get_when, Error, ParaMap, Result, WhenType};
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
-/// let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
+/// let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End)).expect("Error creating FutureValue");
 /// println!("{:#?}'s fv is {:?}", fv, fv.get());
 /// ```
 ///
@@ -30,14 +30,14 @@ pub struct FutureValue {
 
 impl FutureValue {
     /// Instantiate a `FutureValue` instance from a tuple of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
-    pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Self {
-        FutureValue {
+    pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Result<Self> {
+        Ok(FutureValue {
             rate: tup.0,
             nper: tup.1,
             pmt: tup.2,
             pv: tup.3,
             when: tup.4,
-        }
+        })
     }
 
     /// Instantiate a `FutureValue` instance from a hash map with keys of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
@@ -76,7 +76,7 @@ impl FutureValue {
         if self.rate != 0.0 {
             let tmp = (1.0 + self.rate).powf(self.nper as f64);
             let pv_future = self.pv * tmp;
-            let when_f64 = self.when.clone() as u8 as f64;
+            let when_f64 = self.when as u8 as f64;
             let pmt_future = self.pmt * (1.0 + self.rate * when_f64) / self.rate * (tmp - 1.0);
 
             Ok(-pv_future - pmt_future)
@@ -102,7 +102,18 @@ impl FutureValue {
     // }
 }
 
-#[allow(unused_imports)]
+impl FromTuple<(f64, u32, f64, f64, WhenType)> for FutureValue {
+    fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Result<Self> {
+        FutureValue::from_tuple(tup)
+    }
+}
+
+impl FromMap for FutureValue {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        FutureValue::from_map(map)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use core::f64;
@@ -111,7 +122,7 @@ mod tests {
 
     #[test]
     fn test_fv_from_tuple() {
-        let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End));
+        let fv = FutureValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End)).unwrap();
         let cond = (fv.rate == 0.075)
             && (fv.nper == 20)
             && (fv.pmt == -2000.0)

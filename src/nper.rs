@@ -1,4 +1,4 @@
-use crate::{get_f64, get_when, Error, ParaMap, Result, WhenType};
+use crate::{Error, FromMap, FromTuple, ParaMap, Result, WhenType, get_f64, get_when};
 /// # Compute the number of periodic payments
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
@@ -13,7 +13,7 @@ use crate::{get_f64, get_when, Error, ParaMap, Result, WhenType};
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
-/// let nper = NumberPeriod::from_tuple((0.075, -2000.0, 0.0, 100000.0, WhenType::End));
+/// let nper = NumberPeriod::from_tuple((0.075, -2000.0, 0.0, 100000.0, WhenType::End)).expect("Error creating NumberPeriod");
 /// println!("{:#?}'s nper is {:?}", nper, nper.get());
 /// ```
 ///
@@ -28,14 +28,14 @@ pub struct NumberPeriod {
 
 impl NumberPeriod {
     /// Instantiate a `NumberPeriod` instance from a tuple of (`rate`, `pmt`, `pv`, `fv`, and `when`) in said order
-    pub fn from_tuple(tup: (f64, f64, f64, f64, WhenType)) -> Self {
-        NumberPeriod {
+    pub fn from_tuple(tup: (f64, f64, f64, f64, WhenType)) -> Result<Self> {
+        Ok(NumberPeriod {
             rate: tup.0,
             pmt: tup.1,
             pv: tup.2,
             fv: tup.3,
             when: tup.4,
-        }
+        })
     }
 
     /// Instantiate a `NumberPeriod ` instance from a hash map with keys of (`rate`, `pmt`, `pv`, `fv` and `when`) in said order
@@ -68,7 +68,7 @@ impl NumberPeriod {
         but if rate is 0 then
         fv + pv + pmt*nper = 0
         */
-        if (self.rate == 0.0) & (self.pmt == 0.0) {
+        if (self.rate == 0.0) && (self.pmt == 0.0) {
             return Ok(Some(f64::INFINITY));
         }
         if self.rate == 0.0 {
@@ -83,7 +83,7 @@ impl NumberPeriod {
         // We know that rate_ != 0, we don't need to check for division by 0
         // z = pmt_ * (1.0 + rate_ * when_) / rate_
         // return log((-fv_ + z) / (pv_ + z)) / log(1.0 + rate_)
-        let when_f64 = self.when.clone() as u8 as f64;
+        let when_f64 = self.when as u8 as f64;
         let z = self.pmt * (1.0 + self.rate * when_f64) / self.rate;
         Ok(Some(
             ((-self.fv + z) / (self.pv + z)).ln() / (1.0 + self.rate).ln(),
@@ -96,14 +96,26 @@ impl NumberPeriod {
     }
 }
 
-#[allow(unused_imports)]
+impl FromTuple<(f64, f64, f64, f64, WhenType)> for NumberPeriod {
+    fn from_tuple(tup: (f64, f64, f64, f64, WhenType)) -> Result<Self> {
+        NumberPeriod::from_tuple(tup)
+    }
+}
+
+impl FromMap for NumberPeriod {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        NumberPeriod::from_map(map)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
 
     #[test]
     fn test_nper_from_tuple() {
-        let nper = NumberPeriod::from_tuple((0.075, -2000.0, 0.0, 100000.0, WhenType::End));
+        let nper =
+            NumberPeriod::from_tuple((0.075, -2000.0, 0.0, 100000.0, WhenType::End)).unwrap();
         let res = nper.get().unwrap().unwrap();
         let tgt = 21.544944;
 
@@ -143,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_nper_zero_rate_nonzero_pmt() {
-        let nper = NumberPeriod::from_tuple((0.0, -2000.0, 0.0, 100000.0, WhenType::End));
+        let nper = NumberPeriod::from_tuple((0.0, -2000.0, 0.0, 100000.0, WhenType::End)).unwrap();
         let res = nper.get().unwrap().unwrap();
         let tgt = 50.0;
 
@@ -157,7 +169,7 @@ mod tests {
 
     #[test]
     fn test_nper_zero_rate_zero_pmt() {
-        let nper = NumberPeriod::from_tuple((0.0, 0.0, 0.0, 100000.0, WhenType::End));
+        let nper = NumberPeriod::from_tuple((0.0, 0.0, 0.0, 100000.0, WhenType::End)).unwrap();
         let res = nper.get().unwrap().unwrap();
         let tgt = f64::INFINITY;
 
@@ -166,7 +178,7 @@ mod tests {
 
     #[test]
     fn test_nper_lt_negative_one_rate() {
-        let nper = NumberPeriod::from_tuple((-10.0, 0.0, 0.0, 100000.0, WhenType::End));
+        let nper = NumberPeriod::from_tuple((-10.0, 0.0, 0.0, 100000.0, WhenType::End)).unwrap();
         let res = nper.get().unwrap();
         let tgt = None;
 

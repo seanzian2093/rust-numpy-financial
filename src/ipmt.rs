@@ -1,4 +1,7 @@
-use crate::{get_f64, get_u32, get_when, Error, FutureValue, ParaMap, Payment, Result, WhenType};
+use crate::{
+    Error, FromMap, FromTuple, FutureValue, ParaMap, Payment, Result, WhenType, get_f64, get_u32,
+    get_when,
+};
 /// # Compute the interest portion of a payment
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
@@ -14,7 +17,7 @@ use crate::{get_f64, get_u32, get_when, Error, FutureValue, ParaMap, Payment, Re
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
-/// let ipmt = InterestPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End));
+/// let ipmt = InterestPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End)).expect("Error creating InterestPayment");
 /// println!("{:#?}'s ipmt is {:?}", ipmt, ipmt.get());
 /// ```
 
@@ -30,15 +33,15 @@ pub struct InterestPayment {
 
 impl InterestPayment {
     /// Instantiate a `InterestPayment` instance from a tuple of (`rate`, `per`, `nper`, `pv`, `fv` and `when`) in said order
-    pub fn from_tuple(tup: (f64, u32, u32, f64, f64, WhenType)) -> Self {
-        InterestPayment {
+    pub fn from_tuple(tup: (f64, u32, u32, f64, f64, WhenType)) -> Result<Self> {
+        Ok(InterestPayment {
             rate: tup.0,
             per: tup.1,
             nper: tup.2,
             pv: tup.3,
             fv: tup.4,
             when: tup.5,
-        }
+        })
     }
 
     /// Instantiate a `InterestPayment` instance from a hash map with keys of (`rate`, `per`, `nper`, `pv` and `when`) in said order
@@ -75,19 +78,13 @@ impl InterestPayment {
 
         // total payment
         let total_pmt =
-            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when.clone()))
-                .get()?;
+            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when))?.get()?;
         // remaining balance
         // only consider per > 1, i.e. starting from 1st payment
         let impt = if self.per >= 1 {
-            let rbl = FutureValue::from_tuple((
-                self.rate,
-                self.per - 1,
-                total_pmt,
-                self.pv,
-                self.when.clone(),
-            ))
-            .get()?;
+            let rbl =
+                FutureValue::from_tuple((self.rate, self.per - 1, total_pmt, self.pv, self.when))?
+                    .get()?;
 
             match self.when {
                 WhenType::Begin => {
@@ -115,16 +112,26 @@ impl InterestPayment {
     }
 }
 
-#[allow(unused_imports)]
+impl FromTuple<(f64, u32, u32, f64, f64, WhenType)> for InterestPayment {
+    fn from_tuple(tup: (f64, u32, u32, f64, f64, WhenType)) -> Result<Self> {
+        InterestPayment::from_tuple(tup)
+    }
+}
+
+impl FromMap for InterestPayment {
+    fn from_map(map: ParaMap) -> Result<Self> {
+        InterestPayment::from_map(map)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::char::MAX;
-
     use crate::*;
 
     #[test]
     fn test_ipmt_from_tuple() {
-        let ipmt = InterestPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End));
+        let ipmt =
+            InterestPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End)).unwrap();
         let cond = (ipmt.rate == 0.1 / 12.0)
             && (ipmt.per == 1)
             && (ipmt.nper == 24)
