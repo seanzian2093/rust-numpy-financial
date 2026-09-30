@@ -47,7 +47,7 @@ pub fn get_u32(map: &ParaMap, field: &str) -> Result<u32> {
 }
 
 pub fn get_when(map: &ParaMap, field: &str) -> Result<WhenType> {
-    if let Some(&ParaType::When(ref v)) = map.get(field) {
+    if let Some(ParaType::When(v)) = map.get(field) {
         Ok(v.clone())
     } else {
         Err(Error::ParaError(format!("{}: WhenType", field)))
@@ -55,7 +55,7 @@ pub fn get_when(map: &ParaMap, field: &str) -> Result<WhenType> {
 }
 
 pub fn get_vecf64(map: &ParaMap, field: &str) -> Result<Vec<f64>> {
-    if let Some(&ParaType::VecF64(ref v)) = map.get(field) {
+    if let Some(ParaType::VecF64(v)) = map.get(field) {
         Ok(v.clone())
     } else {
         Err(Error::ParaError(format!("{}: VecF64", field)))

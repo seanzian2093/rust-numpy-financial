@@ -2,7 +2,6 @@ use crate::{
     get_f64, get_u32, get_when, Error, InterestPayment, ParaMap, Payment, Result, WhenType,
 };
 /// # Compute the payment against loan principal
-
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
 /// * `per` : the payment period to calculate the interest amount
@@ -20,7 +19,6 @@ use crate::{
 /// let ppmt = PrincipalPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End));
 /// println!("{:#?}'s ppmt is {:?}", ppmt, ppmt.get());
 /// ```
-
 #[derive(Debug)]
 pub struct PrincipalPayment {
     rate: f64,
@@ -54,12 +52,12 @@ impl PrincipalPayment {
             ))
         };
 
-        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
-        let per = get_u32(&map, "per").map_err(|err| op(err))?;
-        let nper = get_u32(&map, "nper").map_err(|err| op(err))?;
-        let pv = get_f64(&map, "pv").map_err(|err| op(err))?;
-        let fv = get_f64(&map, "fv").map_err(|err| op(err))?;
-        let when = get_when(&map, "when").map_err(|err| op(err))?;
+        let rate = get_f64(&map, "rate").map_err(&op)?;
+        let per = get_u32(&map, "per").map_err(&op)?;
+        let nper = get_u32(&map, "nper").map_err(&op)?;
+        let pv = get_f64(&map, "pv").map_err(&op)?;
+        let fv = get_f64(&map, "fv").map_err(&op)?;
+        let when = get_when(&map, "when").map_err(op)?;
         Ok(PrincipalPayment {
             rate,
             per,
@@ -91,10 +89,7 @@ impl PrincipalPayment {
         ))
         .get()?;
 
-        let ppmt = match ipmt {
-            Some(value) => Some(total_pmt - value),
-            None => None,
-        };
+        let ppmt = ipmt.map(|value| total_pmt - value);
 
         Ok(ppmt)
     }

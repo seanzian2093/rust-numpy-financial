@@ -1,6 +1,5 @@
 use crate::{get_f64, get_u32, get_when, Error, ParaMap, Result, WhenType};
 /// # Compute the payment against loan principal plus interest
-
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
 /// * `nper` : number of periodic payments
@@ -48,11 +47,11 @@ impl Payment {
             ))
         };
 
-        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
-        let nper = get_u32(&map, "nper").map_err(|err| op(err))?;
-        let pv = get_f64(&map, "pv").map_err(|err| op(err))?;
-        let fv = get_f64(&map, "fv").map_err(|err| op(err))?;
-        let when = get_when(&map, "when").map_err(|err| op(err))?;
+        let rate = get_f64(&map, "rate").map_err(&op)?;
+        let nper = get_u32(&map, "nper").map_err(&op)?;
+        let pv = get_f64(&map, "pv").map_err(&op)?;
+        let fv = get_f64(&map, "fv").map_err(&op)?;
+        let when = get_when(&map, "when").map_err(op)?;
         Ok(Payment {
             rate,
             nper,

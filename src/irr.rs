@@ -1,13 +1,11 @@
 use crate::{float_close, get_vecf64, Error, ParaMap, Result, ATOL, RTOL};
 /// # Compute the Internal Rate of Return (IRR)
 /// This is the "average" periodically compounded rate of return that gives a net present value of 0.0
-
 /// ## Parameters
 /// `values` : array_like, shape(N,)
 /// * input cash flows per time period
 /// * by convention, net "deposits" are negative and net "withdrawals" are positive
 /// * e.g., the first element of `values`, which represents the initial investment, is typically negative
-
 /// ## Return
 /// * `irr`: internal rate of return for periodic input `values`
 ///
@@ -44,11 +42,11 @@ impl InternalRateReturn {
                 map, err
             ))
         };
-        let values = get_vecf64(&map, "values").map_err(|err| op(err))?;
+        let values = get_vecf64(&map, "values").map_err(op)?;
         Ok(InternalRateReturn { values })
     }
 
-    fn fx(v: &Vec<f64>, x: f64) -> Result<f64> {
+    fn fx(v: &[f64], x: f64) -> Result<f64> {
         let fx: f64 = v
             .iter()
             .rev()
@@ -58,7 +56,7 @@ impl InternalRateReturn {
         Ok(fx)
     }
 
-    fn dx(v: &Vec<f64>, x: f64) -> Result<f64> {
+    fn dx(v: &[f64], x: f64) -> Result<f64> {
         let dx: f64 = v
             .iter()
             .rev()
@@ -73,7 +71,7 @@ impl InternalRateReturn {
     }
 
     // find 1st root
-    fn find_root(v: &Vec<f64>) -> Result<Option<f64>> {
+    fn find_root(v: &[f64]) -> Result<Option<f64>> {
         // to re-implement
         let mut x = -0.9;
         let mut iter = 0;
@@ -106,7 +104,7 @@ impl InternalRateReturn {
     }
 
     // fina all possible roots- not used
-    fn _find_roots(v: &Vec<f64>) -> Result<Vec<f64>> {
+    fn _find_roots(v: &[f64]) -> Result<Vec<f64>> {
         // to re-implement
         let mut x = -10.0;
         let mut iter = 0;

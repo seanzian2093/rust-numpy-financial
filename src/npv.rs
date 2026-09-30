@@ -1,7 +1,6 @@
 use crate::{get_f64, get_vecf64, Error, ParaMap, Result};
 
 /// # Compute the net present value of a cash flow, given an interest rate
-
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
 /// * `values`: a cash flow, assume first payment is made at present, i.e. `t=0` the begining of 1st period
@@ -16,7 +15,6 @@ use crate::{get_f64, get_vecf64, Error, ParaMap, Result};
 /// let npv = NetPresentValue::from_tuple(tup);
 /// println!("{:#?}'s npv is {:?}", npv, npv.get());
 /// ```
-
 #[derive(Debug)]
 pub struct NetPresentValue {
     values: Vec<f64>,
@@ -41,8 +39,8 @@ impl NetPresentValue {
                 map, err
             ))
         };
-        let values = get_vecf64(&map, "values").map_err(|err| op(err))?;
-        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
+        let values = get_vecf64(&map, "values").map_err(&op)?;
+        let rate = get_f64(&map, "rate").map_err(op)?;
         Ok(NetPresentValue { values, rate })
     }
 

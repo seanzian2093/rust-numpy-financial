@@ -1,6 +1,5 @@
 use crate::{get_f64, get_u32, get_when, util::WhenType, Error, ParaMap, Result};
 /// # Compute the interest rate
-
 /// ## Parameters
 /// * `nper` : number of compounding periods
 /// * `pmt` : payment in each period
@@ -21,7 +20,6 @@ use crate::{get_f64, get_u32, get_when, util::WhenType, Error, ParaMap, Result};
 /// println!("{:#?}'s rate is {:#?}", rate, rate.get());
 /// ```
 ///
-
 #[derive(Debug)]
 pub struct Rate {
     nper: u32,
@@ -59,14 +57,14 @@ impl Rate {
             ))
         };
 
-        let nper = get_u32(&map, "nper").map_err(|err| op(err))?;
-        let pmt = get_f64(&map, "pmt").map_err(|err| op(err))?;
-        let pv = get_f64(&map, "pv").map_err(|err| op(err))?;
-        let fv = get_f64(&map, "fv").map_err(|err| op(err))?;
-        let when = get_when(&map, "when").map_err(|err| op(err))?;
-        let guess = get_f64(&map, "guess").map_err(|err| op(err))?;
-        let tol = get_f64(&map, "tol").map_err(|err| op(err))?;
-        let maxiter = get_u32(&map, "maxiter").map_err(|err| op(err))?;
+        let nper = get_u32(&map, "nper").map_err(&op)?;
+        let pmt = get_f64(&map, "pmt").map_err(&op)?;
+        let pv = get_f64(&map, "pv").map_err(&op)?;
+        let fv = get_f64(&map, "fv").map_err(&op)?;
+        let when = get_when(&map, "when").map_err(&op)?;
+        let guess = get_f64(&map, "guess").map_err(&op)?;
+        let tol = get_f64(&map, "tol").map_err(&op)?;
+        let maxiter = get_u32(&map, "maxiter").map_err(op)?;
         Ok(Rate {
             nper,
             pmt,
@@ -127,11 +125,11 @@ impl Rate {
         // if convergence
         if close {
             println!("Converged - {}, at: {}", rn, iter);
-            return Ok(Some(rn));
+            Ok(Some(rn))
         // if no convergence after maxiter
         } else {
             println!("Maximum iterations reached - {}, at: {}", self.maxiter, rn);
-            return Ok(None);
+            Ok(None)
         }
     }
 

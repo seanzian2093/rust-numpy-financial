@@ -1,6 +1,5 @@
 use crate::{get_f64, get_u32, get_when, Error, ParaMap, Result, WhenType};
 /// # Compute the future value
-
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
 /// * `nper` : number of compounding periods
@@ -51,11 +50,11 @@ impl FutureValue {
             ))
         };
 
-        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
-        let nper = get_u32(&map, "nper").map_err(|err| op(err))?;
-        let pmt = get_f64(&map, "pmt").map_err(|err| op(err))?;
-        let pv = get_f64(&map, "pv").map_err(|err| op(err))?;
-        let when = get_when(&map, "when").map_err(|err| op(err))?;
+        let rate = get_f64(&map, "rate").map_err(&op)?;
+        let nper = get_u32(&map, "nper").map_err(&op)?;
+        let pmt = get_f64(&map, "pmt").map_err(&op)?;
+        let pv = get_f64(&map, "pv").map_err(&op)?;
+        let when = get_when(&map, "when").map_err(op)?;
 
         Ok(FutureValue {
             rate,
@@ -185,7 +184,7 @@ mod tests {
         // npf.fv(0.075, 20, -2000, 0, 0),
         // 86609.362673042924,
         let res = fv.get().unwrap();
-        let tgt = 86609.362673042924;
+        let tgt = 86609.36267304292;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
             "{:#?} v.s. {:#?}",

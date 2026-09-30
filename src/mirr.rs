@@ -1,7 +1,6 @@
 use crate::{get_f64, get_vecf64, Error, ParaMap, Result};
 
 /// # Compute the Modified Internal Rate of Return (MIRR)
-
 /// MIRR is a financial metric that takes into account both the cost of the investment and the return on reinvested cash flows.
 /// It is useful for evaluating the profitability of an investment with multiple cash inflows and outflows.
 ///
@@ -9,10 +8,8 @@ use crate::{get_f64, get_vecf64, Error, ParaMap, Result};
 /// * `values` : array_like. It must contain at least one positive and one negative value
 /// * `finance_rate` : interest rate paid on the cash flows
 /// * `reinvest_rate` : interest rate received on the cash flows upon reinvestment
-
 /// ## Return:
 /// * `mirr`: the modified internal rate of return
-
 /// ## Example
 /// ```rust
 /// use rfinancial::*;
@@ -48,9 +45,9 @@ impl ModifiedIRR {
             ))
         };
 
-        let values = get_vecf64(&map, "values").map_err(|err| op(err))?;
-        let finance_rate = get_f64(&map, "finance_rate").map_err(|err| op(err))?;
-        let reinvest_rate = get_f64(&map, "reinvest_rate").map_err(|err| op(err))?;
+        let values = get_vecf64(&map, "values").map_err(&op)?;
+        let finance_rate = get_f64(&map, "finance_rate").map_err(&op)?;
+        let reinvest_rate = get_f64(&map, "reinvest_rate").map_err(op)?;
         Ok(ModifiedIRR {
             values,
             finance_rate,

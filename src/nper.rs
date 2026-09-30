@@ -1,6 +1,5 @@
 use crate::{get_f64, get_when, Error, ParaMap, Result, WhenType};
 /// # Compute the number of periodic payments
-
 /// ## Parameters
 /// * `rate` : an interest rate compounded once per period
 /// * `pmt` : payment in each period
@@ -48,11 +47,11 @@ impl NumberPeriod {
                 map, err
             ))
         };
-        let rate = get_f64(&map, "rate").map_err(|err| op(err))?;
-        let pmt = get_f64(&map, "pmt").map_err(|err| op(err))?;
-        let pv = get_f64(&map, "pv").map_err(|err| op(err))?;
-        let fv = get_f64(&map, "fv").map_err(|err| op(err))?;
-        let when = get_when(&map, "when").map_err(|err| op(err))?;
+        let rate = get_f64(&map, "rate").map_err(&op)?;
+        let pmt = get_f64(&map, "pmt").map_err(&op)?;
+        let pv = get_f64(&map, "pv").map_err(&op)?;
+        let fv = get_f64(&map, "fv").map_err(&op)?;
+        let when = get_when(&map, "when").map_err(op)?;
         Ok(NumberPeriod {
             rate,
             pmt,
