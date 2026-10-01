@@ -16,8 +16,8 @@ use crate::{
 /// Struct-based:
 /// ```rust
 /// use rfinancial::*;
-/// let pv = PresentValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End)).expect("Error creating PresentValue");
-/// println!("{:#?}'s pv is {:?}", pv, pv.get());
+/// let result = PresentValue::from_tuple((0.075, 20, -2000.0, 0.0, WhenType::End)).expect("Error creating PresentValue");
+/// println!("{:#?}'s pv is {:?}", result, result.get());
 /// ```
 /// Function-based:
 /// ```rust
