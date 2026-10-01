@@ -26,8 +26,6 @@ pub struct FutureValue {
     when: WhenType,
 }
 
-// pub type FVMap = std::collections::HashMap<String, ParaType>;
-
 impl FutureValue {
     /// Instantiate a `FutureValue` instance from a tuple of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
     pub fn from_tuple(tup: (f64, u32, f64, f64, WhenType)) -> Result<Self> {
@@ -40,8 +38,8 @@ impl FutureValue {
         })
     }
 
-    /// Instantiate a `FutureValue` instance from a hash map with keys of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order
-    /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+    /// Instantiate a `FutureValue` instance from a hash map with keys of (`rate`, `nper`, `pmt`, `pv` and `when`) in said order.
+    /// Since `HashMap` requires values of same type, we need to wrap into a variant of enum
     pub fn from_map(map: ParaMap) -> Result<Self> {
         let op = |err: Error| {
             Error::OtherError(format!(
@@ -65,7 +63,6 @@ impl FutureValue {
         })
     }
 
-    // fn fv(&self) -> f64 {
     fn fv(&self) -> Result<f64> {
         /*
         Solve below equation if rate is not 0
@@ -89,17 +86,6 @@ impl FutureValue {
     pub fn get(&self) -> Result<f64> {
         self.fv()
     }
-
-    // pub fn get(&self) -> Option<f64> {
-    //     if let Some(fv) = self.fv().ok() {
-    //         if fv.is_nan() {
-    //             println!("Warning: NAN produced. Please check your input.");
-    //         };
-    //         Some(fv)
-    //     } else {
-    //         None
-    //     }
-    // }
 }
 
 impl FromTuple<(f64, u32, f64, f64, WhenType)> for FutureValue {

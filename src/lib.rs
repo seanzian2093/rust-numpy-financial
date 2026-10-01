@@ -50,7 +50,7 @@ mod pv;
 mod rate;
 mod util;
 
-pub use crate::error::*;
+pub use crate::error::{Error, Result};
 pub use crate::fv::*;
 pub use crate::ipmt::InterestPayment;
 pub use crate::irr::InternalRateReturn;
@@ -59,6 +59,6 @@ pub use crate::nper::NumberPeriod;
 pub use crate::npv::NetPresentValue;
 pub use crate::pmt::Payment;
 pub use crate::ppmt::PrincipalPayment;
-pub use crate::pv::PresentValue;
+pub use crate::pv::{PresentValue, pv, pv_from_map};
 pub use crate::rate::Rate;
 pub use crate::util::*;
