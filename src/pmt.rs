@@ -11,10 +11,17 @@ use crate::{Error, FromMap, FromTuple, ParaMap, Result, WhenType, get_f64, get_u
 /// * `pmt`: payment in each period
 ///
 /// ## Example
+/// Struct-based:
 /// ```rust
 /// use rfinancial::*;
 /// let pmt = Payment::from_tuple((0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End)).expect("Error creating Payment");
 /// println!("{:#?}'s pmt is {:?}", pmt, pmt.get());
+/// ```
+/// Function-based:
+/// ```rust
+/// use rfinancial::*;
+/// let result = pmt(0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End).expect("Error computing pmt");
+/// println!("pmt is {:?}", result);
 /// ```
 #[derive(Debug)]
 pub struct Payment {
@@ -62,21 +69,7 @@ impl Payment {
     }
 
     fn pmt(&self) -> Result<f64> {
-        /*
-        Solve below equation if rate is not 0
-        fv + pv*(1+rate)**nper + pmt*(1+rate*when)/rate*((1+rate)**nper-1) = 0
-        but if rate is 0 then
-        fv + pv + pmt*nper = 0
-        */
-        if self.rate != 0.0 {
-            let tmp = (1.0 + self.rate).powf(self.nper as f64);
-            let pv_future = self.pv * tmp;
-            let when_f64 = self.when as u8 as f64;
-            let fact = (1.0 + self.rate * when_f64) / self.rate * (tmp - 1.0);
-            Ok(-(self.fv + pv_future) / fact)
-        } else {
-            Ok(-(self.pv + self.fv) / self.nper as f64)
-        }
+        pmt(self.rate, self.nper, self.pv, self.fv, self.when)
     }
 
     /// Get the payment from an instance of `Payment`
@@ -97,9 +90,74 @@ impl FromMap for Payment {
     }
 }
 
+/// Compute the payment against loan principal plus interest
+/// ## Parameters
+/// * `rate` : an interest rate compounded once per period
+/// * `nper` : number of periodic payments
+/// * `pv` : a present value
+/// * `fv` : a future value
+/// * `when` : when payments are due [`WhenType`]
+///
+/// ## Return:
+/// * payment in each period
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let result = pmt(0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End).expect("Error computing pmt");
+/// println!("pmt is {:?}", result);
+/// ```
+pub fn pmt(rate: f64, nper: u32, pv: f64, fv: f64, when: WhenType) -> Result<f64> {
+    /*
+    Solve below equation if rate is not 0
+    fv + pv*(1+rate)**nper + pmt*(1+rate*when)/rate*((1+rate)**nper-1) = 0
+    but if rate is 0 then
+    fv + pv + pmt*nper = 0
+    */
+    if rate != 0.0 {
+        let tmp = (1.0 + rate).powf(nper as f64);
+        let pv_future = pv * tmp;
+        let when_f64 = when as u8 as f64;
+        let fact = (1.0 + rate * when_f64) / rate * (tmp - 1.0);
+        Ok(-(fv + pv_future) / fact)
+    } else {
+        Ok(-(pv + fv) / nper as f64)
+    }
+}
+
+/// Compute the payment from a hash map with keys of (`rate`, `nper`, `pv`, `fv`, and `when`)
+/// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let mut map = ParaMap::new();
+/// map.insert("rate".into(), ParaType::F64(0.08 / 12.0));
+/// map.insert("nper".into(), ParaType::U32(60));
+/// map.insert("pv".into(), ParaType::F64(15000.0));
+/// map.insert("fv".into(), ParaType::F64(0.0));
+/// map.insert("when".into(), ParaType::When(WhenType::End));
+/// let result = pmt_from_map(map).expect("Error computing pmt");
+/// println!("pmt is {:?}", result);
+/// ```
+pub fn pmt_from_map(map: ParaMap) -> Result<f64> {
+    let op = |err: Error| {
+        Error::OtherError(format!(
+            "Failed to compute `pmt` from: `{:?}` <- {}",
+            map, err
+        ))
+    };
+
+    let rate = get_f64(&map, "rate").map_err(&op)?;
+    let nper = get_u32(&map, "nper").map_err(&op)?;
+    let pv = get_f64(&map, "pv").map_err(&op)?;
+    let fv = get_f64(&map, "fv").map_err(&op)?;
+    let when = get_when(&map, "when").map_err(op)?;
+    pmt(rate, nper, pv, fv, when)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{float_close, ATOL, RTOL, WhenType, Payment, ParaType, ParaMap};
+    use crate::{ATOL, ParaMap, ParaType, Payment, RTOL, WhenType, float_close};
 
     #[test]
     fn test_pmt_from_tuple() {
@@ -202,5 +260,40 @@ mod tests {
         let pmt = Payment::from_map(map);
         let cond = pmt.is_err();
         assert!(cond)
+    }
+
+    #[test]
+    fn test_pmt_function() {
+        // res = npf.pmt(0.08 / 12, 5 * 12, 15000)
+        // tgt = -304.145914
+        let res = super::pmt(0.08 / 12.0, 60, 15000.0, 0.0, WhenType::End).unwrap();
+        let tgt = -304.145914;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_pmt_from_map_function() {
+        let mut map = ParaMap::new();
+        map.insert("rate".into(), ParaType::F64(0.08 / 12.0));
+        map.insert("nper".into(), ParaType::U32(60));
+        map.insert("pv".into(), ParaType::F64(15000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+
+        // res = npf.pmt(0.08 / 12, 5 * 12, 15000)
+        // tgt = -304.145914
+        let res = super::pmt_from_map(map).unwrap();
+        let tgt = -304.145914;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
     }
 }

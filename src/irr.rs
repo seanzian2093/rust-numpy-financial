@@ -10,11 +10,19 @@ use crate::{ATOL, Error, FromMap, FromTuple, ParaMap, RTOL, Result, float_close,
 /// * `irr`: internal rate of return for periodic input `values`
 ///
 /// ## Example
+/// Struct-based:
 /// ```rust
 /// use rfinancial::*;
 /// let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
-/// let irr = InternalRateReturn::from_vec(values).expect("Error creating IRR");
-/// println!("{:#?}'s irr is {:?}", irr, irr.get());
+/// let result = InternalRateReturn::from_vec(values).expect("Error creating IRR");
+/// println!("{:#?}'s irr is {:?}", result, result.get());
+/// ```
+/// Function-based:
+/// ```rust
+/// use rfinancial::*;
+/// let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
+/// let result = irr(&values).expect("Error computing irr");
+/// println!("irr is {:?}", result);
 /// ```
 /// ## Caveat
 /// * I use Newton-Raphson method to find first `irr` that makes the `npv` of given cash flows 0
@@ -33,22 +41,7 @@ impl InternalRateReturn {
     /// - `values` has fewer than 2 elements
     /// - `values` contains only positive or only negative values (IRR requires both)
     pub fn from_vec(values: Vec<f64>) -> Result<Self> {
-        if values.len() < 2 {
-            return Err(Error::ParaError(
-                "values must contain at least 2 elements".to_string(),
-            ));
-        }
-
-        let has_positive = values.iter().any(|&v| v > 0.0);
-        let has_negative = values.iter().any(|&v| v < 0.0);
-
-        if !has_positive || !has_negative {
-            return Err(Error::ParaError(
-                "values must contain both positive and negative values for IRR to exist"
-                    .to_string(),
-            ));
-        }
-
+        validate_values(&values)?;
         Ok(InternalRateReturn { values })
     }
 
@@ -127,35 +120,7 @@ impl InternalRateReturn {
     }
 
     fn irr(&self) -> Result<Option<f64>> {
-        // Validation is already done in from_vec(), so we can assume:
-        // - values.len() >= 2
-        // - values contains both positive and negative values
-
-        // Otherwise we are set to find irr
-
-        // let g = Self::find_roots(&self.values);
-
-        // - remove non-real ones
-        // - f64 is real
-        // - this filtering to be done in find roots step
-        // let eirr: Vec<f64> = g.iter().map(|&v| v - 1.0).collect();
-
-        // - remove those less than -1
-        // let eirr: Vec<f64> = eirr.into_iter().filter(|&v| v >= -1.0).collect();
-
-        // select one if ther are multiple
-        // fn select_one(values: Vec<f64>) -> f64 {
-        //     if values.len() == 1 {
-        //         values[0]
-        //     } else {
-        //         values[0]
-        //     }
-        // }
-        // Some(select_one(eirr))
-
-        // For now use find_root, i.e. return one root or none
-        let irr = Self::find_root(&self.values)?.unwrap() - 1.0;
-        Ok(Some(irr))
+        irr(&self.values)
     }
 
     /// Get the `irr` from an instance of `InternalRateReturn`
@@ -174,6 +139,76 @@ impl FromMap for InternalRateReturn {
     fn from_map(map: ParaMap) -> Result<Self> {
         InternalRateReturn::from_map(map)
     }
+}
+
+/// Validate that `values` has at least 2 elements and contains both positive and negative values
+fn validate_values(values: &[f64]) -> Result<()> {
+    if values.len() < 2 {
+        return Err(Error::ParaError(
+            "values must contain at least 2 elements".to_string(),
+        ));
+    }
+
+    let has_positive = values.iter().any(|&v| v > 0.0);
+    let has_negative = values.iter().any(|&v| v < 0.0);
+
+    if !has_positive || !has_negative {
+        return Err(Error::ParaError(
+            "values must contain both positive and negative values for IRR to exist".to_string(),
+        ));
+    }
+
+    Ok(())
+}
+
+/// Compute the Internal Rate of Return (IRR)
+/// ## Parameters
+/// `values` : array_like, shape(N,)
+/// * input cash flows per time period
+/// * by convention, net "deposits" are negative and net "withdrawals" are positive
+/// * e.g., the first element of `values`, which represents the initial investment, is typically negative
+/// ## Return
+/// * internal rate of return for periodic input `values`
+///
+/// # Errors
+/// Returns `ParaError` if:
+/// - `values` has fewer than 2 elements
+/// - `values` contains only positive or only negative values (IRR requires both)
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
+/// let result = irr(&values).expect("Error computing irr");
+/// println!("irr is {:?}", result);
+/// ```
+pub fn irr(values: &[f64]) -> Result<Option<f64>> {
+    validate_values(values)?;
+    let irr = InternalRateReturn::find_root(values)?.unwrap() - 1.0;
+    Ok(Some(irr))
+}
+
+/// Compute the Internal Rate of Return (IRR) from a hash map with key `values`
+/// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
+/// let mut map = ParaMap::new();
+/// map.insert("values".into(), ParaType::VecF64(values));
+/// let result = irr_from_map(map).expect("Error computing irr");
+/// println!("irr is {:?}", result);
+/// ```
+pub fn irr_from_map(map: ParaMap) -> Result<Option<f64>> {
+    let op = |err: Error| {
+        Error::OtherError(format!(
+            "Failed to compute `irr` from: `{:?}` <- {}",
+            map, err
+        ))
+    };
+
+    let values = get_vecf64(&map, "values").map_err(op)?;
+    irr(&values)
 }
 
 #[cfg(test)]
@@ -270,5 +305,37 @@ mod tests {
         let res = InternalRateReturn::from_map(map);
         let cond = res.is_err();
         assert!(cond);
+    }
+
+    #[test]
+    fn test_irr_function() {
+        // npf.irr([-150000, 15000, 25000, 35000, 45000, 60000])
+        // 0.052432888859413884
+        let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
+        let res = super::irr(&values).unwrap().unwrap();
+        let tgt = 0.052432888859413884;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        )
+    }
+
+    #[test]
+    fn test_irr_from_map_function() {
+        // npf.irr([-150000, 15000, 25000, 35000, 45000, 60000])
+        // 0.052432888859413884
+        let values: Vec<f64> = vec![-150000.0, 15000.0, 25000.0, 35000.0, 45000.0, 60000.0];
+        let mut map = ParaMap::new();
+        map.insert("values".to_string(), ParaType::VecF64(values));
+        let res = super::irr_from_map(map).unwrap().unwrap();
+        let tgt = 0.052432888859413884;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        )
     }
 }

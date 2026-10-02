@@ -1,5 +1,7 @@
+use crate::{
+    Error, FromMap, FromTuple, ParaMap, Result, get_f64, get_u32, get_when, util::WhenType,
+};
 use log::debug;
-use crate::{Error, ParaMap, Result, get_f64, get_u32, get_when, util::WhenType, FromTuple, FromMap};
 /// # Compute the interest rate
 /// ## Parameters
 /// * `nper` : number of compounding periods
@@ -15,10 +17,17 @@ use crate::{Error, ParaMap, Result, get_f64, get_u32, get_when, util::WhenType, 
 /// * `rate` : an interest rate compounded once per period or `None`
 ///
 /// ## Example
+/// Struct-based:
 /// ```rust
 /// use rfinancial::*;
-/// let rate = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100)).expect("Error creating Rate");
-/// println!("{:#?}'s rate is {:#?}", rate, rate.get());
+/// let result = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100)).expect("Error creating Rate");
+/// println!("{:#?}'s rate is {:#?}", result, result.get());
+/// ```
+/// Function-based:
+/// ```rust
+/// use rfinancial::*;
+/// let result = rate(10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100).expect("Error computing rate");
+/// println!("rate is {:#?}", result);
 /// ```
 ///
 #[derive(Debug)]
@@ -94,43 +103,16 @@ impl Rate {
     }
 
     fn rate(&self) -> Result<Option<f64>> {
-        /*
-           The rate of interest is computed by iteratively solving the (non-linear) equation:
-           `fv + pv*(1+rate)**nper + pmt*(1+rate*when)/rate * ((1+rate)**nper - 1) = 0` for `rate`
-        */
-        // Assume all parameters are provided - deal with default arguments later
-
-        // rn = guess
-        // iterator = 0
-        // close = False
-        // while (iterator < maxiter) and not np.all(close):
-        //     rnp1 = rn - _g_div_gp(rn, nper, pmt, pv, fv, when)
-        //     diff = abs(rnp1 - rn)
-        //     close = diff < tol
-        //     iterator += 1
-        //     rn = rnp1
-
-        let mut rn = self.guess;
-        let mut iter: u32 = 0;
-        let mut close = false;
-
-        while (iter < self.maxiter) && (!close) {
-            let rnp1 = rn - Self::_g_div_gp(rn, self.nper, self.pmt, self.pv, self.fv, self.when);
-            let diff = (rnp1 - rn).abs();
-            close = diff < self.tol;
-            iter += 1;
-            rn = rnp1;
-        }
-
-        // if convergence
-        if close {
-            debug!("Converged - {}, at: {}", rn, iter);
-            Ok(Some(rn))
-        // if no convergence after maxiter
-        } else {
-            debug!("Maximum iterations reached - {}, at: {}", self.maxiter, rn);
-            Ok(None)
-        }
+        rate(
+            self.nper,
+            self.pmt,
+            self.pv,
+            self.fv,
+            self.when,
+            self.guess,
+            self.tol,
+            self.maxiter,
+        )
     }
 
     /// Get the rate from an instance of `Rate`
@@ -151,13 +133,126 @@ impl FromMap for Rate {
     }
 }
 
+/// Evaluate `g(r_n)/g'(r_n)`, where `g = fv + pv*(1+rate)**nper + pmt*(1+rate*when)/rate * ((1+rate)**nper - 1)`
+fn g_div_gp(r: f64, n: u32, p: f64, x: f64, y: f64, w: WhenType) -> f64 {
+    // converts to f64 for calculation
+    let n = n as f64;
+    let w = w as u8 as f64;
+
+    let t1 = (r + 1.0).powf(n);
+    let t2 = (r + 1.0).powf(n - 1.0);
+    let g = y + t1 * x + p * (t1 - 1.0) * (r * w + 1.0) / r;
+    let gp = n * t2 * x - p * (t1 - 1.0) * (r * w + 1.0) / (r.powf(2.0))
+        + n * p * t2 * (r * w + 1.0) / r
+        + p * (t1 - 1.0) * w / r;
+    g / gp
+}
+
+/// Compute the interest rate
+/// ## Parameters
+/// * `nper` : number of compounding periods
+/// * `pmt` : payment in each period
+/// * `pv` : present value
+/// * `fv`: the value at the end of the `nper` periods
+/// * `when` : when payments are due [`WhenType`]
+/// * `guess` : starting guess for solving the rate of interest
+/// * `tol` : required tolerance for the solution
+/// * `maxiter` : maximum iterations in finding the solution
+///
+/// ## Return:
+/// * an interest rate compounded once per period or `None`
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let result = rate(10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100).expect("Error computing rate");
+/// println!("rate is {:#?}", result);
+/// ```
+#[allow(clippy::too_many_arguments)]
+pub fn rate(
+    nper: u32,
+    pmt: f64,
+    pv: f64,
+    fv: f64,
+    when: WhenType,
+    guess: f64,
+    tol: f64,
+    maxiter: u32,
+) -> Result<Option<f64>> {
+    /*
+       The rate of interest is computed by iteratively solving the (non-linear) equation:
+       `fv + pv*(1+rate)**nper + pmt*(1+rate*when)/rate * ((1+rate)**nper - 1) = 0` for `rate`
+    */
+    // Assume all parameters are provided - deal with default arguments later
+
+    let mut rn = guess;
+    let mut iter: u32 = 0;
+    let mut close = false;
+
+    while iter < maxiter && !close {
+        let rnp1 = rn - g_div_gp(rn, nper, pmt, pv, fv, when);
+        let diff = (rnp1 - rn).abs();
+        close = diff < tol;
+        iter += 1;
+        rn = rnp1;
+    }
+
+    // if convergence
+    if close {
+        debug!("Converged - {}, at: {}", rn, iter);
+        Ok(Some(rn))
+    // if no convergence after maxiter
+    } else {
+        debug!("Maximum iterations reached - {}, at: {}", maxiter, rn);
+        Ok(None)
+    }
+}
+
+/// Compute the interest rate from a hash map with keys of
+/// (`nper`, `pmt`, `pv`, `fv`, `when`, `guess`, `tol`, `maxiter`)
+/// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let mut map = ParaMap::new();
+/// map.insert("nper".into(), ParaType::U32(10));
+/// map.insert("pmt".into(), ParaType::F64(0.0));
+/// map.insert("pv".into(), ParaType::F64(-3500.0));
+/// map.insert("fv".into(), ParaType::F64(10000.0));
+/// map.insert("when".into(), ParaType::When(WhenType::End));
+/// map.insert("guess".into(), ParaType::F64(0.1));
+/// map.insert("tol".into(), ParaType::F64(1e-6));
+/// map.insert("maxiter".into(), ParaType::U32(100));
+/// let result = rate_from_map(map).expect("Error computing rate");
+/// println!("rate is {:#?}", result);
+/// ```
+pub fn rate_from_map(map: ParaMap) -> Result<Option<f64>> {
+    let op = |err: Error| {
+        Error::OtherError(format!(
+            "Failed to compute `rate` from: `{:?}` <- {}",
+            map, err
+        ))
+    };
+
+    let nper = get_u32(&map, "nper").map_err(&op)?;
+    let pmt = get_f64(&map, "pmt").map_err(&op)?;
+    let pv = get_f64(&map, "pv").map_err(&op)?;
+    let fv = get_f64(&map, "fv").map_err(&op)?;
+    let when = get_when(&map, "when").map_err(&op)?;
+    let guess = get_f64(&map, "guess").map_err(&op)?;
+    let tol = get_f64(&map, "tol").map_err(&op)?;
+    let maxiter = get_u32(&map, "maxiter").map_err(op)?;
+    rate(nper, pmt, pv, fv, when, guess, tol, maxiter)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
 
     #[test]
     fn test_rate_from_tuple() {
-        let rate = Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100)).unwrap();
+        let rate =
+            Rate::from_tuple((10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100)).unwrap();
         // npf.rate(10, 0, -3500, 10000)
         // 0.11069085371426901
         let res = rate.get().unwrap().unwrap();
@@ -304,5 +399,45 @@ mod tests {
         map.insert("maxiter".into(), ParaType::U32(100));
         let rate = Rate::from_map(map);
         assert!(rate.is_err());
+    }
+
+    #[test]
+    fn test_rate_function() {
+        // npf.rate(10, 0, -3500, 10000)
+        // 0.11069085371426901
+        let res = super::rate(10, 0.0, -3500.0, 10000.0, WhenType::End, 0.1, 1e-6, 100)
+            .unwrap()
+            .unwrap();
+        let tgt = 0.11069085371426901;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_rate_from_map_function() {
+        let mut map = ParaMap::new();
+        map.insert("nper".into(), ParaType::U32(10));
+        map.insert("pmt".into(), ParaType::F64(0.0));
+        map.insert("pv".into(), ParaType::F64(-3500.0));
+        map.insert("fv".into(), ParaType::F64(10000.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+        map.insert("guess".into(), ParaType::F64(0.1));
+        map.insert("tol".into(), ParaType::F64(1e-6));
+        map.insert("maxiter".into(), ParaType::U32(100));
+
+        // npf.rate(10, 0, -3500, 10000)
+        // 0.11069085371426901
+        let res = super::rate_from_map(map).unwrap().unwrap();
+        let tgt = 0.11069085371426901;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
     }
 }

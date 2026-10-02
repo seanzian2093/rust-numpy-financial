@@ -1,6 +1,6 @@
 use crate::{
-    Error, FromMap, FromTuple, FutureValue, ParaMap, Payment, Result, WhenType, get_f64, get_u32,
-    get_when,
+    Error, FromMap, FromTuple, ParaMap, Result, WhenType, fv::fv as future_value, get_f64, get_u32,
+    get_when, pmt,
 };
 /// # Compute the interest portion of a payment
 /// ## Parameters
@@ -15,10 +15,17 @@ use crate::{
 /// * `ipmt`: the interest portion in a payment or `None`
 ///
 /// ## Example
+/// Struct-based:
 /// ```rust
 /// use rfinancial::*;
-/// let ipmt = InterestPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End)).expect("Error creating InterestPayment");
-/// println!("{:#?}'s ipmt is {:?}", ipmt, ipmt.get());
+/// let result = InterestPayment::from_tuple((0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End)).expect("Error creating InterestPayment");
+/// println!("{:#?}'s ipmt is {:?}", result, result.get());
+/// ```
+/// Function-based:
+/// ```rust
+/// use rfinancial::*;
+/// let result = ipmt(0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End).expect("Error computing ipmt");
+/// println!("ipmt is {:?}", result);
 /// ```
 
 #[derive(Debug)]
@@ -71,39 +78,7 @@ impl InterestPayment {
     }
 
     fn ipmt(&self) -> Result<Option<f64>> {
-        /*
-            The total payment is made up of payment against principal plus interest.
-            pmt = ppmt + ipmt
-        */
-
-        // total payment
-        let total_pmt =
-            Payment::from_tuple((self.rate, self.nper, self.pv, self.fv, self.when))?.get()?;
-        // remaining balance
-        // only consider per > 1, i.e. starting from 1st payment
-        let impt = if self.per >= 1 {
-            let rbl =
-                FutureValue::from_tuple((self.rate, self.per - 1, total_pmt, self.pv, self.when))?
-                    .get()?;
-
-            match self.when {
-                WhenType::Begin => {
-                    if self.per == 1 {
-                        // if payment is made at begin of a period, interest portion is 0 for 1st payment
-                        Some(0.0)
-                    } else {
-                        // discount for 2nd payment and beyond
-                        Some(rbl / (1.0 + self.rate) * self.rate)
-                    }
-                }
-                WhenType::End => Some(rbl * self.rate),
-            }
-            // if 0th or negative-th(not possible though since u32) payments are requested, return None
-        } else {
-            None
-        };
-
-        Ok(impt)
+        ipmt(self.rate, self.per, self.nper, self.pv, self.fv, self.when)
     }
 
     /// Get the interet payment from an instance of `InterestPayment`
@@ -122,6 +97,97 @@ impl FromMap for InterestPayment {
     fn from_map(map: ParaMap) -> Result<Self> {
         InterestPayment::from_map(map)
     }
+}
+
+/// Compute the interest portion of a payment
+/// ## Parameters
+/// * `rate` : an interest rate compounded once per period
+/// * `per` : the payment period to calculate the interest amount
+/// * `nper` : number of compounding periods
+/// * `pv` : a present value
+/// * `fv` : a future value
+/// * `when` : when payments are due [`WhenType`]
+///
+/// ## Return:
+/// * the interest portion in a payment or `None`
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let result = ipmt(0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End).expect("Error computing ipmt");
+/// println!("ipmt is {:?}", result);
+/// ```
+pub fn ipmt(
+    rate: f64,
+    per: u32,
+    nper: u32,
+    pv: f64,
+    fv: f64,
+    when: WhenType,
+) -> Result<Option<f64>> {
+    /*
+        The total payment is made up of payment against principal plus interest.
+        pmt = ppmt + ipmt
+    */
+
+    // total payment
+    let total_pmt = pmt(rate, nper, pv, fv, when)?;
+    // remaining balance
+    // only consider per > 1, i.e. starting from 1st payment
+    let impt = if per >= 1 {
+        // fv is imported as `future_value` since `fv` is masked by the argument `fv`
+        let rbl = future_value(rate, per - 1, total_pmt, pv, when)?;
+
+        match when {
+            WhenType::Begin => {
+                if per == 1 {
+                    // if payment is made at begin of a period, interest portion is 0 for 1st payment
+                    Some(0.0)
+                } else {
+                    // discount for 2nd payment and beyond
+                    Some(rbl / (1.0 + rate) * rate)
+                }
+            }
+            WhenType::End => Some(rbl * rate),
+        }
+        // if 0th or negative-th(not possible though since u32) payments are requested, return None
+    } else {
+        None
+    };
+
+    Ok(impt)
+}
+
+/// Compute the interest portion of a payment from a hash map with keys of (`rate`, `per`, `nper`, `pv`, `fv`, and `when`)
+/// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let mut map = ParaMap::new();
+/// map.insert("rate".into(), ParaType::F64(0.1 / 12.0));
+/// map.insert("per".into(), ParaType::U32(1));
+/// map.insert("nper".into(), ParaType::U32(24));
+/// map.insert("pv".into(), ParaType::F64(2000.0));
+/// map.insert("fv".into(), ParaType::F64(0.0));
+/// map.insert("when".into(), ParaType::When(WhenType::End));
+/// let result = ipmt_from_map(map).expect("Error computing ipmt");
+/// println!("ipmt is {:?}", result);
+/// ```
+pub fn ipmt_from_map(map: ParaMap) -> Result<Option<f64>> {
+    let op = |err: Error| {
+        Error::OtherError(format!(
+            "Failed to compute `ipmt` from: `{:?}` <- {}",
+            map, err
+        ))
+    };
+
+    let rate = get_f64(&map, "rate").map_err(&op)?;
+    let per = get_u32(&map, "per").map_err(&op)?;
+    let nper = get_u32(&map, "nper").map_err(&op)?;
+    let pv = get_f64(&map, "pv").map_err(&op)?;
+    let fv = get_f64(&map, "fv").map_err(&op)?;
+    let when = get_when(&map, "when").map_err(op)?;
+    ipmt(rate, per, nper, pv, fv, when)
 }
 
 #[cfg(test)]
@@ -299,5 +365,43 @@ mod tests {
         let cond = ipmt.is_err();
 
         assert!(cond);
+    }
+
+    #[test]
+    fn test_ipmt_function() {
+        // npf.ipmt(0.1 / 12, 1, 24, 2000),
+        // -16.666667
+        let res = super::ipmt(0.1 / 12.0, 1, 24, 2000.0, 0.0, WhenType::End)
+            .unwrap()
+            .unwrap();
+        let tgt = -16.666667;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_ipmt_from_map_function() {
+        let mut map = ParaMap::new();
+        map.insert("rate".into(), ParaType::F64(0.1 / 12.0));
+        map.insert("per".into(), ParaType::U32(1));
+        map.insert("nper".into(), ParaType::U32(24));
+        map.insert("pv".into(), ParaType::F64(2000.0));
+        map.insert("fv".into(), ParaType::F64(0.0));
+        map.insert("when".into(), ParaType::When(WhenType::End));
+
+        // npf.ipmt(0.1 / 12, 1, 24, 2000),
+        // -16.666667
+        let res = super::ipmt_from_map(map).unwrap().unwrap();
+        let tgt = -16.666667;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
     }
 }

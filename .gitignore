@@ -28,3 +28,4 @@ Cargo.lock
 # Local documentation (for internal reference only)
 REVIEW.md
 FIXES.md
+BENCHMARKING.md

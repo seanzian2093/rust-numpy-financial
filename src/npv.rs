@@ -9,11 +9,19 @@ use crate::{Error, FromMap, FromTuple, ParaMap, Result, get_f64, get_vecf64};
 /// * `ipmt`: the net present value
 ///
 /// ## Example
+/// Struct-based:
 /// ```rust
 /// use rfinancial::*;
 /// let tup = (vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0], 0.05);
-/// let npv = NetPresentValue::from_tuple(tup).expect("Error creating NPV");
-/// println!("{:#?}'s npv is {:?}", npv, npv.get());
+/// let result = NetPresentValue::from_tuple(tup).expect("Error creating NPV");
+/// println!("{:#?}'s npv is {:?}", result, result.get());
+/// ```
+/// Function-based:
+/// ```rust
+/// use rfinancial::*;
+/// let values = vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0];
+/// let result = npv(&values, 0.05).expect("Error computing npv");
+/// println!("npv is {:?}", result);
 /// ```
 #[derive(Debug)]
 pub struct NetPresentValue {
@@ -27,9 +35,7 @@ impl NetPresentValue {
     /// # Errors
     /// Returns `ParaError` if `values` is empty
     pub fn from_tuple(tup: (Vec<f64>, f64)) -> Result<Self> {
-        if tup.0.is_empty() {
-            return Err(Error::ParaError("values must not be empty".to_string()));
-        }
+        validate_values(&tup.0)?;
         Ok(NetPresentValue {
             values: tup.0,
             rate: tup.1,
@@ -55,17 +61,7 @@ impl NetPresentValue {
     }
 
     fn npv(&self) -> Result<f64> {
-        let npv: f64 = self
-            .values
-            .iter()
-            .enumerate()
-            .map(|(p, &c)| {
-                let p = p as f64;
-                c * (1.0 + self.rate).powf(-p)
-            })
-            .sum();
-
-        Ok(npv)
+        npv(&self.values, self.rate)
     }
 
     pub fn get(&self) -> Result<f64> {
@@ -83,6 +79,70 @@ impl FromMap for NetPresentValue {
     fn from_map(map: ParaMap) -> Result<Self> {
         NetPresentValue::from_map(map)
     }
+}
+
+/// Validate that `values` is not empty
+fn validate_values(values: &[f64]) -> Result<()> {
+    if values.is_empty() {
+        return Err(Error::ParaError("values must not be empty".to_string()));
+    }
+    Ok(())
+}
+
+/// Compute the net present value of a cash flow, given an interest rate
+/// ## Parameters
+/// * `values`: a cash flow, assume first payment is made at present, i.e. `t=0` the begining of 1st period
+/// * `rate` : an interest rate compounded once per period
+///
+/// ## Return:
+/// * the net present value
+///
+/// # Errors
+/// Returns `ParaError` if `values` is empty
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let values = vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0];
+/// let result = npv(&values, 0.05).expect("Error computing npv");
+/// println!("npv is {:?}", result);
+/// ```
+pub fn npv(values: &[f64], rate: f64) -> Result<f64> {
+    validate_values(values)?;
+    let npv: f64 = values
+        .iter()
+        .enumerate()
+        .map(|(p, &c)| {
+            let p = p as f64;
+            c * (1.0 + rate).powf(-p)
+        })
+        .sum();
+
+    Ok(npv)
+}
+
+/// Compute the net present value from a hash map with keys of (`values`, `rate`)
+/// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let mut map = ParaMap::new();
+/// map.insert("values".into(), ParaType::VecF64(vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0]));
+/// map.insert("rate".into(), ParaType::F64(0.05));
+/// let result = npv_from_map(map).expect("Error computing npv");
+/// println!("npv is {:?}", result);
+/// ```
+pub fn npv_from_map(map: ParaMap) -> Result<f64> {
+    let op = |err: Error| {
+        Error::OtherError(format!(
+            "Failed to compute `npv` from: `{:?}` <- {}",
+            map, err
+        ))
+    };
+
+    let values = get_vecf64(&map, "values").map_err(&op)?;
+    let rate = get_f64(&map, "rate").map_err(op)?;
+    npv(&values, rate)
 }
 
 #[cfg(test)]
@@ -153,5 +213,40 @@ mod tests {
         let npv = NetPresentValue::from_map(map);
         let cond = npv.is_err();
         assert!(cond);
+    }
+
+    #[test]
+    fn test_npv_function() {
+        // npf.npv(0.05, [-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0])
+        // 122.89485495093959
+        let values = vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0];
+        let res = super::npv(&values, 0.05).unwrap();
+        let tgt = 122.89485495093959;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_npv_from_map_function() {
+        // npf.npv(0.05, [-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0])
+        // 122.89485495093959
+        let values = vec![-15000.0, 1500.0, 2500.0, 3500.0, 4500.0, 6000.0];
+
+        let mut map = ParaMap::new();
+        map.insert("values".to_string(), ParaType::VecF64(values));
+        map.insert("rate".to_string(), ParaType::F64(0.05));
+
+        let res = super::npv_from_map(map).unwrap();
+        let tgt = 122.89485495093959;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
     }
 }
