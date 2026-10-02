@@ -52,13 +52,13 @@ mod util;
 
 pub use crate::error::{Error, Result};
 pub use crate::fv::{FutureValue, fv, fv_from_map};
-pub use crate::ipmt::{InterestPayment, ipmt, ipmt_from_map};
+pub use crate::ipmt::{InterestPayment, InterestPaymentBuilder, ipmt, ipmt_from_map};
 pub use crate::irr::{InternalRateReturn, irr, irr_from_map};
 pub use crate::mirr::{ModifiedIRR, mirr, mirr_from_map};
 pub use crate::nper::{NumberPeriod, nper, nper_from_map};
 pub use crate::npv::{NetPresentValue, npv, npv_from_map};
 pub use crate::pmt::{Payment, pmt, pmt_from_map};
-pub use crate::ppmt::{PrincipalPayment, ppmt, ppmt_from_map};
+pub use crate::ppmt::{PrincipalPayment, PrincipalPaymentBuilder, ppmt, ppmt_from_map};
 pub use crate::pv::{PresentValue, pv, pv_from_map};
-pub use crate::rate::{Rate, rate, rate_from_map};
+pub use crate::rate::{Rate, RateBuilder, rate, rate_from_map};
 pub use crate::util::*;

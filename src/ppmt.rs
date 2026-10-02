@@ -170,6 +170,101 @@ pub fn ppmt_from_map(map: ParaMap) -> Result<Option<f64>> {
     ppmt(rate, per, nper, pv, fv, when)
 }
 
+/// Builder for constructing `PrincipalPayment` instances with a fluent API
+///
+/// Provides sensible defaults for optional parameters:
+/// - `when`: `WhenType::End` (payments due at end of period)
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let ppmt = PrincipalPaymentBuilder::new()
+///     .rate(0.1 / 12.0)
+///     .per(1)
+///     .nper(24)
+///     .pv(2000.0)
+///     .build()?;
+/// println!("ppmt is {:?}", ppmt.get());
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[derive(Debug, Clone)]
+pub struct PrincipalPaymentBuilder {
+    rate: f64,
+    per: u32,
+    nper: u32,
+    pv: f64,
+    fv: f64,
+    when: WhenType,
+}
+
+impl PrincipalPaymentBuilder {
+    /// Create a new `PrincipalPaymentBuilder` with default values
+    pub fn new() -> Self {
+        PrincipalPaymentBuilder {
+            rate: 0.0,
+            per: 1,
+            nper: 1,
+            pv: 0.0,
+            fv: 0.0,
+            when: WhenType::End,
+        }
+    }
+
+    /// Set the interest rate compounded once per period
+    pub fn rate(mut self, rate: f64) -> Self {
+        self.rate = rate;
+        self
+    }
+
+    /// Set the payment period to calculate principal for
+    pub fn per(mut self, per: u32) -> Self {
+        self.per = per;
+        self
+    }
+
+    /// Set the number of compounding periods
+    pub fn nper(mut self, nper: u32) -> Self {
+        self.nper = nper;
+        self
+    }
+
+    /// Set the present value
+    pub fn pv(mut self, pv: f64) -> Self {
+        self.pv = pv;
+        self
+    }
+
+    /// Set the future value (defaults to 0.0)
+    pub fn fv(mut self, fv: f64) -> Self {
+        self.fv = fv;
+        self
+    }
+
+    /// Set when payments are due (defaults to `WhenType::End`)
+    pub fn when(mut self, when: WhenType) -> Self {
+        self.when = when;
+        self
+    }
+
+    /// Build the `PrincipalPayment` instance
+    pub fn build(self) -> Result<PrincipalPayment> {
+        Ok(PrincipalPayment {
+            rate: self.rate,
+            per: self.per,
+            nper: self.nper,
+            pv: self.pv,
+            fv: self.fv,
+            when: self.when,
+        })
+    }
+}
+
+impl Default for PrincipalPaymentBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -335,6 +430,49 @@ mod tests {
         // npf.ppmt(0.1 / 12, 1, 60, 55000)
         // -710.254125786425
         let res = super::ppmt_from_map(map).unwrap().unwrap();
+        let tgt = -710.254125786425;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_ppmt_builder() {
+        let ppmt = PrincipalPaymentBuilder::new()
+            .rate(0.1 / 12.0)
+            .per(1)
+            .nper(60)
+            .pv(55000.0)
+            .fv(0.0)
+            .when(WhenType::End)
+            .build()
+            .unwrap();
+
+        let res = ppmt.get().unwrap().unwrap();
+        let tgt = -710.254125786425;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_ppmt_builder_with_defaults() {
+        // Test that builder uses sensible defaults for fv and when
+        let ppmt = PrincipalPaymentBuilder::new()
+            .rate(0.1 / 12.0)
+            .per(1)
+            .nper(60)
+            .pv(55000.0)
+            .build()
+            .unwrap();
+
+        let res = ppmt.get().unwrap().unwrap();
         let tgt = -710.254125786425;
         assert!(
             float_close(res, tgt, RTOL, ATOL),

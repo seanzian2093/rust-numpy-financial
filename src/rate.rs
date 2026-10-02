@@ -245,6 +245,120 @@ pub fn rate_from_map(map: ParaMap) -> Result<Option<f64>> {
     rate(nper, pmt, pv, fv, when, guess, tol, maxiter)
 }
 
+/// Builder for constructing `Rate` instances with a fluent API
+///
+/// Provides sensible defaults for optional parameters:
+/// - `guess`: 0.1 (initial guess for rate)
+/// - `tol`: 1e-6 (tolerance for convergence)
+/// - `maxiter`: 100 (maximum iterations)
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let rate = RateBuilder::new()
+///     .nper(10)
+///     .pv(-3500.0)
+///     .fv(10000.0)
+///     .build()?;
+/// println!("rate is {:?}", rate.get());
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[derive(Debug, Clone)]
+pub struct RateBuilder {
+    nper: u32,
+    pmt: f64,
+    pv: f64,
+    fv: f64,
+    when: WhenType,
+    guess: f64,
+    tol: f64,
+    maxiter: u32,
+}
+
+impl RateBuilder {
+    /// Create a new `RateBuilder` with default values
+    pub fn new() -> Self {
+        RateBuilder {
+            nper: 1,
+            pmt: 0.0,
+            pv: 0.0,
+            fv: 0.0,
+            when: WhenType::End,
+            guess: 0.1,
+            tol: 1e-6,
+            maxiter: 100,
+        }
+    }
+
+    /// Set the number of compounding periods
+    pub fn nper(mut self, nper: u32) -> Self {
+        self.nper = nper;
+        self
+    }
+
+    /// Set the payment in each period
+    pub fn pmt(mut self, pmt: f64) -> Self {
+        self.pmt = pmt;
+        self
+    }
+
+    /// Set the present value
+    pub fn pv(mut self, pv: f64) -> Self {
+        self.pv = pv;
+        self
+    }
+
+    /// Set the future value
+    pub fn fv(mut self, fv: f64) -> Self {
+        self.fv = fv;
+        self
+    }
+
+    /// Set when payments are due (defaults to `WhenType::End`)
+    pub fn when(mut self, when: WhenType) -> Self {
+        self.when = when;
+        self
+    }
+
+    /// Set the initial guess for rate solving (defaults to 0.1)
+    pub fn guess(mut self, guess: f64) -> Self {
+        self.guess = guess;
+        self
+    }
+
+    /// Set the tolerance for convergence (defaults to 1e-6)
+    pub fn tol(mut self, tol: f64) -> Self {
+        self.tol = tol;
+        self
+    }
+
+    /// Set the maximum number of iterations (defaults to 100)
+    pub fn maxiter(mut self, maxiter: u32) -> Self {
+        self.maxiter = maxiter;
+        self
+    }
+
+    /// Build the `Rate` instance
+    pub fn build(self) -> Result<Rate> {
+        Ok(Rate {
+            nper: self.nper,
+            pmt: self.pmt,
+            pv: self.pv,
+            fv: self.fv,
+            when: self.when,
+            guess: self.guess,
+            tol: self.tol,
+            maxiter: self.maxiter,
+        })
+    }
+}
+
+impl Default for RateBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -432,6 +546,51 @@ mod tests {
         // npf.rate(10, 0, -3500, 10000)
         // 0.11069085371426901
         let res = super::rate_from_map(map).unwrap().unwrap();
+        let tgt = 0.11069085371426901;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_rate_builder() {
+        let rate = RateBuilder::new()
+            .nper(10)
+            .pmt(0.0)
+            .pv(-3500.0)
+            .fv(10000.0)
+            .when(WhenType::End)
+            .guess(0.1)
+            .tol(1e-6)
+            .maxiter(100)
+            .build()
+            .unwrap();
+
+        let res = rate.get().unwrap().unwrap();
+        let tgt = 0.11069085371426901;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_rate_builder_with_defaults() {
+        // Test that builder uses sensible defaults
+        let rate = RateBuilder::new()
+            .nper(10)
+            .pv(-3500.0)
+            .fv(10000.0)
+            .build()
+            .unwrap();
+
+        // Should produce the same result as with explicit defaults
+        let res = rate.get().unwrap().unwrap();
         let tgt = 0.11069085371426901;
         assert!(
             float_close(res, tgt, RTOL, ATOL),

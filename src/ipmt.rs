@@ -190,6 +190,101 @@ pub fn ipmt_from_map(map: ParaMap) -> Result<Option<f64>> {
     ipmt(rate, per, nper, pv, fv, when)
 }
 
+/// Builder for constructing `InterestPayment` instances with a fluent API
+///
+/// Provides sensible defaults for optional parameters:
+/// - `when`: `WhenType::End` (payments due at end of period)
+///
+/// ## Example
+/// ```rust
+/// use rfinancial::*;
+/// let ipmt = InterestPaymentBuilder::new()
+///     .rate(0.1 / 12.0)
+///     .per(1)
+///     .nper(24)
+///     .pv(2000.0)
+///     .build()?;
+/// println!("ipmt is {:?}", ipmt.get());
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
+#[derive(Debug, Clone)]
+pub struct InterestPaymentBuilder {
+    rate: f64,
+    per: u32,
+    nper: u32,
+    pv: f64,
+    fv: f64,
+    when: WhenType,
+}
+
+impl InterestPaymentBuilder {
+    /// Create a new `InterestPaymentBuilder` with default values
+    pub fn new() -> Self {
+        InterestPaymentBuilder {
+            rate: 0.0,
+            per: 1,
+            nper: 1,
+            pv: 0.0,
+            fv: 0.0,
+            when: WhenType::End,
+        }
+    }
+
+    /// Set the interest rate compounded once per period
+    pub fn rate(mut self, rate: f64) -> Self {
+        self.rate = rate;
+        self
+    }
+
+    /// Set the payment period to calculate interest for
+    pub fn per(mut self, per: u32) -> Self {
+        self.per = per;
+        self
+    }
+
+    /// Set the number of compounding periods
+    pub fn nper(mut self, nper: u32) -> Self {
+        self.nper = nper;
+        self
+    }
+
+    /// Set the present value
+    pub fn pv(mut self, pv: f64) -> Self {
+        self.pv = pv;
+        self
+    }
+
+    /// Set the future value (defaults to 0.0)
+    pub fn fv(mut self, fv: f64) -> Self {
+        self.fv = fv;
+        self
+    }
+
+    /// Set when payments are due (defaults to `WhenType::End`)
+    pub fn when(mut self, when: WhenType) -> Self {
+        self.when = when;
+        self
+    }
+
+    /// Build the `InterestPayment` instance
+    pub fn build(self) -> Result<InterestPayment> {
+        Ok(InterestPayment {
+            rate: self.rate,
+            per: self.per,
+            nper: self.nper,
+            pv: self.pv,
+            fv: self.fv,
+            when: self.when,
+        })
+    }
+}
+
+impl Default for InterestPaymentBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::*;
@@ -396,6 +491,49 @@ mod tests {
         // npf.ipmt(0.1 / 12, 1, 24, 2000),
         // -16.666667
         let res = super::ipmt_from_map(map).unwrap().unwrap();
+        let tgt = -16.666667;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_ipmt_builder() {
+        let ipmt = InterestPaymentBuilder::new()
+            .rate(0.1 / 12.0)
+            .per(1)
+            .nper(24)
+            .pv(2000.0)
+            .fv(0.0)
+            .when(WhenType::End)
+            .build()
+            .unwrap();
+
+        let res = ipmt.get().unwrap().unwrap();
+        let tgt = -16.666667;
+        assert!(
+            float_close(res, tgt, RTOL, ATOL),
+            "{:#?} v.s. {:#?}",
+            res,
+            tgt
+        );
+    }
+
+    #[test]
+    fn test_ipmt_builder_with_defaults() {
+        // Test that builder uses sensible defaults for fv and when
+        let ipmt = InterestPaymentBuilder::new()
+            .rate(0.1 / 12.0)
+            .per(1)
+            .nper(24)
+            .pv(2000.0)
+            .build()
+            .unwrap();
+
+        let res = ipmt.get().unwrap().unwrap();
         let tgt = -16.666667;
         assert!(
             float_close(res, tgt, RTOL, ATOL),
