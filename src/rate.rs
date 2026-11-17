@@ -67,13 +67,13 @@ impl Rate {
             ))
         };
 
-        let nper = get_u32(&map, "nper").map_err(&op)?;
-        let pmt = get_f64(&map, "pmt").map_err(&op)?;
-        let pv = get_f64(&map, "pv").map_err(&op)?;
-        let fv = get_f64(&map, "fv").map_err(&op)?;
-        let when = get_when(&map, "when").map_err(&op)?;
-        let guess = get_f64(&map, "guess").map_err(&op)?;
-        let tol = get_f64(&map, "tol").map_err(&op)?;
+        let nper = get_u32(&map, "nper").map_err(op)?;
+        let pmt = get_f64(&map, "pmt").map_err(op)?;
+        let pv = get_f64(&map, "pv").map_err(op)?;
+        let fv = get_f64(&map, "fv").map_err(op)?;
+        let when = get_when(&map, "when").map_err(op)?;
+        let guess = get_f64(&map, "guess").map_err(op)?;
+        let tol = get_f64(&map, "tol").map_err(op)?;
         let maxiter = get_u32(&map, "maxiter").map_err(op)?;
         Ok(Rate {
             nper,
@@ -234,13 +234,13 @@ pub fn rate_from_map(map: ParaMap) -> Result<Option<f64>> {
         ))
     };
 
-    let nper = get_u32(&map, "nper").map_err(&op)?;
-    let pmt = get_f64(&map, "pmt").map_err(&op)?;
-    let pv = get_f64(&map, "pv").map_err(&op)?;
-    let fv = get_f64(&map, "fv").map_err(&op)?;
-    let when = get_when(&map, "when").map_err(&op)?;
-    let guess = get_f64(&map, "guess").map_err(&op)?;
-    let tol = get_f64(&map, "tol").map_err(&op)?;
+    let nper = get_u32(&map, "nper").map_err(op)?;
+    let pmt = get_f64(&map, "pmt").map_err(op)?;
+    let pv = get_f64(&map, "pv").map_err(op)?;
+    let fv = get_f64(&map, "fv").map_err(op)?;
+    let when = get_when(&map, "when").map_err(op)?;
+    let guess = get_f64(&map, "guess").map_err(op)?;
+    let tol = get_f64(&map, "tol").map_err(op)?;
     let maxiter = get_u32(&map, "maxiter").map_err(op)?;
     rate(nper, pmt, pv, fv, when, guess, tol, maxiter)
 }

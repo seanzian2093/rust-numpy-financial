@@ -10,12 +10,12 @@ pub fn float_close(lhs: f64, rhs: f64, rtol: f64, atol: f64) -> bool {
     if rhs == 0.0 {
         return (lhs - rhs).abs() <= atol;
     }
-    
+
     // Relative tolerance
     let cond1 = ((lhs - rhs) / rhs.abs()).abs() <= rtol;
     // Absolute tolerance
     let cond2 = (lhs - rhs).abs() <= atol;
-    
+
     cond1 || cond2
 }
 

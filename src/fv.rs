@@ -55,10 +55,10 @@ impl FutureValue {
             ))
         };
 
-        let rate = get_f64(&map, "rate").map_err(&op)?;
-        let nper = get_u32(&map, "nper").map_err(&op)?;
-        let pmt = get_f64(&map, "pmt").map_err(&op)?;
-        let pv = get_f64(&map, "pv").map_err(&op)?;
+        let rate = get_f64(&map, "rate").map_err(op)?;
+        let nper = get_u32(&map, "nper").map_err(op)?;
+        let pmt = get_f64(&map, "pmt").map_err(op)?;
+        let pv = get_f64(&map, "pv").map_err(op)?;
         let when = get_when(&map, "when").map_err(op)?;
 
         Ok(FutureValue {
@@ -150,18 +150,16 @@ pub fn fv_from_map(map: ParaMap) -> Result<f64> {
         ))
     };
 
-    let rate = get_f64(&map, "rate").map_err(&op)?;
-    let nper = get_u32(&map, "nper").map_err(&op)?;
-    let pmt = get_f64(&map, "pmt").map_err(&op)?;
-    let pv = get_f64(&map, "pv").map_err(&op)?;
+    let rate = get_f64(&map, "rate").map_err(op)?;
+    let nper = get_u32(&map, "nper").map_err(op)?;
+    let pmt = get_f64(&map, "pmt").map_err(op)?;
+    let pv = get_f64(&map, "pv").map_err(op)?;
     let when = get_when(&map, "when").map_err(op)?;
     fv(rate, nper, pmt, pv, when)
 }
 
 #[cfg(test)]
 mod tests {
-    use core::f64;
-
     use crate::*;
 
     #[test]

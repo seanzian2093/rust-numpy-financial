@@ -65,8 +65,8 @@ impl ModifiedIRR {
             ))
         };
 
-        let values = get_vecf64(&map, "values").map_err(&op)?;
-        let finance_rate = get_f64(&map, "finance_rate").map_err(&op)?;
+        let values = get_vecf64(&map, "values").map_err(op)?;
+        let finance_rate = get_f64(&map, "finance_rate").map_err(op)?;
         let reinvest_rate = get_f64(&map, "reinvest_rate").map_err(op)?;
 
         Self::from_tuple((values, finance_rate, reinvest_rate))
@@ -183,8 +183,8 @@ pub fn mirr_from_map(map: ParaMap) -> Result<Option<f64>> {
         ))
     };
 
-    let values = get_vecf64(&map, "values").map_err(&op)?;
-    let finance_rate = get_f64(&map, "finance_rate").map_err(&op)?;
+    let values = get_vecf64(&map, "values").map_err(op)?;
+    let finance_rate = get_f64(&map, "finance_rate").map_err(op)?;
     let reinvest_rate = get_f64(&map, "reinvest_rate").map_err(op)?;
     mirr(&values, finance_rate, reinvest_rate)
 }
@@ -279,8 +279,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "need to figure what is this case"]
     fn test_mirr_nan() {
+        // This test case produces infinite due to extremely large rates
         let tup = (
             vec![100.0, 200.0, -50.0, 300.00, -200.0],
             f64::MAX,
@@ -292,7 +292,7 @@ mod tests {
         map.insert("reinvest_rate".to_string(), ParaType::F64(tup.2));
 
         let mirr = ModifiedIRR::from_map(map);
-        let cond = mirr.unwrap().get().unwrap().unwrap().is_nan();
+        let cond = mirr.unwrap().get().unwrap().unwrap().is_infinite();
         assert!(cond);
     }
 

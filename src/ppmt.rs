@@ -59,11 +59,11 @@ impl PrincipalPayment {
             ))
         };
 
-        let rate = get_f64(&map, "rate").map_err(&op)?;
-        let per = get_u32(&map, "per").map_err(&op)?;
-        let nper = get_u32(&map, "nper").map_err(&op)?;
-        let pv = get_f64(&map, "pv").map_err(&op)?;
-        let fv = get_f64(&map, "fv").map_err(&op)?;
+        let rate = get_f64(&map, "rate").map_err(op)?;
+        let per = get_u32(&map, "per").map_err(op)?;
+        let nper = get_u32(&map, "nper").map_err(op)?;
+        let pv = get_f64(&map, "pv").map_err(op)?;
+        let fv = get_f64(&map, "fv").map_err(op)?;
         let when = get_when(&map, "when").map_err(op)?;
         Ok(PrincipalPayment {
             rate,
@@ -161,11 +161,11 @@ pub fn ppmt_from_map(map: ParaMap) -> Result<Option<f64>> {
         ))
     };
 
-    let rate = get_f64(&map, "rate").map_err(&op)?;
-    let per = get_u32(&map, "per").map_err(&op)?;
-    let nper = get_u32(&map, "nper").map_err(&op)?;
-    let pv = get_f64(&map, "pv").map_err(&op)?;
-    let fv = get_f64(&map, "fv").map_err(&op)?;
+    let rate = get_f64(&map, "rate").map_err(op)?;
+    let per = get_u32(&map, "per").map_err(op)?;
+    let nper = get_u32(&map, "nper").map_err(op)?;
+    let pv = get_f64(&map, "pv").map_err(op)?;
+    let fv = get_f64(&map, "fv").map_err(op)?;
     let when = get_when(&map, "when").map_err(op)?;
     ppmt(rate, per, nper, pv, fv, when)
 }

@@ -56,10 +56,10 @@ impl PresentValue {
             ))
         };
 
-        let rate = get_f64(&map, "rate").map_err(&op)?;
-        let nper = get_u32(&map, "nper").map_err(&op)?;
-        let pmt = get_f64(&map, "pmt").map_err(&op)?;
-        let fv = get_f64(&map, "fv").map_err(&op)?;
+        let rate = get_f64(&map, "rate").map_err(op)?;
+        let nper = get_u32(&map, "nper").map_err(op)?;
+        let pmt = get_f64(&map, "pmt").map_err(op)?;
+        let fv = get_f64(&map, "fv").map_err(op)?;
         let when = get_when(&map, "when").map_err(op)?;
         Ok(PresentValue {
             rate,
@@ -148,10 +148,10 @@ pub fn pv_from_map(map: ParaMap) -> Result<f64> {
         ))
     };
 
-    let rate = get_f64(&map, "rate").map_err(&op)?;
-    let nper = get_u32(&map, "nper").map_err(&op)?;
-    let pmt = get_f64(&map, "pmt").map_err(&op)?;
-    let fv = get_f64(&map, "fv").map_err(&op)?;
+    let rate = get_f64(&map, "rate").map_err(op)?;
+    let nper = get_u32(&map, "nper").map_err(op)?;
+    let pmt = get_f64(&map, "pmt").map_err(op)?;
+    let fv = get_f64(&map, "fv").map_err(op)?;
     let when = get_when(&map, "when").map_err(op)?;
     pv(rate, nper, pmt, fv, when)
 }

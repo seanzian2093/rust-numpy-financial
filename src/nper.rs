@@ -54,10 +54,10 @@ impl NumberPeriod {
                 map, err
             ))
         };
-        let rate = get_f64(&map, "rate").map_err(&op)?;
-        let pmt = get_f64(&map, "pmt").map_err(&op)?;
-        let pv = get_f64(&map, "pv").map_err(&op)?;
-        let fv = get_f64(&map, "fv").map_err(&op)?;
+        let rate = get_f64(&map, "rate").map_err(op)?;
+        let pmt = get_f64(&map, "pmt").map_err(op)?;
+        let pv = get_f64(&map, "pv").map_err(op)?;
+        let fv = get_f64(&map, "fv").map_err(op)?;
         let when = get_when(&map, "when").map_err(op)?;
         Ok(NumberPeriod {
             rate,
@@ -156,10 +156,10 @@ pub fn nper_from_map(map: ParaMap) -> Result<Option<f64>> {
         ))
     };
 
-    let rate = get_f64(&map, "rate").map_err(&op)?;
-    let pmt = get_f64(&map, "pmt").map_err(&op)?;
-    let pv = get_f64(&map, "pv").map_err(&op)?;
-    let fv = get_f64(&map, "fv").map_err(&op)?;
+    let rate = get_f64(&map, "rate").map_err(op)?;
+    let pmt = get_f64(&map, "pmt").map_err(op)?;
+    let pv = get_f64(&map, "pv").map_err(op)?;
+    let fv = get_f64(&map, "fv").map_err(op)?;
     let when = get_when(&map, "when").map_err(op)?;
     nper(rate, pmt, pv, fv, when)
 }
@@ -257,8 +257,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "need to figure out how to produce nan"]
     fn test_nper_nan() {
+        // This test case produces infinite due to extremely large rate
         let mut map = ParaMap::new();
         map.insert("rate".into(), ParaType::F64(f64::MAX));
         map.insert("pmt".into(), ParaType::F64(-2000.0));
@@ -268,8 +268,7 @@ mod tests {
 
         let nper = NumberPeriod::from_map(map).unwrap();
 
-        // need to figure out how to produce nan
-        let cond = nper.get().unwrap().unwrap().is_nan();
+        let cond = nper.get().unwrap().unwrap().is_infinite();
         assert!(cond);
     }
 

@@ -54,7 +54,7 @@ impl NetPresentValue {
                 map, err
             ))
         };
-        let values = get_vecf64(&map, "values").map_err(&op)?;
+        let values = get_vecf64(&map, "values").map_err(op)?;
         let rate = get_f64(&map, "rate").map_err(op)?;
         Self::from_tuple((values, rate))
             .map_err(|e| Error::OtherError(format!("NPV validation failed: {}", e)))
@@ -140,7 +140,7 @@ pub fn npv_from_map(map: ParaMap) -> Result<f64> {
         ))
     };
 
-    let values = get_vecf64(&map, "values").map_err(&op)?;
+    let values = get_vecf64(&map, "values").map_err(op)?;
     let rate = get_f64(&map, "rate").map_err(op)?;
     npv(&values, rate)
 }
