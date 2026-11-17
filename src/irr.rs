@@ -25,9 +25,9 @@ use crate::{Error, FromMap, FromTuple, ParaMap, Result, get_vecf64};
 /// println!("irr is {:?}", result);
 /// ```
 /// ## Caveat
-/// * I use Newton-Raphson method to find first `irr` that makes the `npv` of given cash flows 0
-/// * I am still trying to find/craft packge to find roots of polynomial in similar way as `numpy_financial`
-/// * Appreciate any feedbacks
+/// Cash flows with one sign change use adaptive bracketing and bisection.
+/// For multiple sign changes, a bounded scan finds candidate roots. Selection
+/// follows `numpy_financial` 1.1.0, but the scan can still miss roots.
 #[derive(Debug)]
 pub struct InternalRateReturn {
     values: Vec<f64>,
@@ -94,8 +94,8 @@ impl InternalRateReturn {
     ///
     /// This is the NPV form of the cash flow polynomial. It shares the same roots as the raw
     /// polynomial for `x > 0` (they differ by the strictly positive factor `x^(n-1)`), but the
-    /// terms shrink instead of growing, so it stays finite for long series where the raw form
-    /// would overflow to infinity.
+    /// terms shrink for `x >= 1`, avoiding the raw form's overflow on long series.
+    /// For `x < 1`, evaluation can still overflow.
     fn gx(v: &[f64], x: f64) -> f64 {
         v.iter().rev().fold(0.0, |acc, &c| acc / x + c)
     }
@@ -117,16 +117,31 @@ impl InternalRateReturn {
 
     /// Find the IRR root as `x = 1 + rate`.
     ///
-    /// Only `x > 0` is economically meaningful (a rate above -100%). Non-conventional cash flows
-    /// can still have several such roots, so every sign change in range is bracketed and
-    /// refined, and the one closest to a zero rate is returned. This matches how
-    /// `numpy_financial` selects among multiple IRRs.
+    /// Only `x > 0` is economically meaningful (a rate above -100%). Cash flows
+    /// with one sign change have exactly one positive root, which is bracketed adaptively.
+    /// Other cash flows use a bounded scan. As in `numpy_financial` 1.1.0, selection
+    /// prefers nonnegative rates when available, then chooses the rate closest to zero.
     ///
     /// Bracketing then bisecting cannot latch onto a negative root or diverge the way an
     /// unguarded Newton iteration can. Unlike an all-roots eigenvalue solve, a scan can in
     /// principle still miss a closely spaced pair; [`Self::refine`] is what makes that unlikely.
     fn find_root(v: &[f64]) -> Result<Option<f64>> {
-        // x in [1e-6, 1e3] covers rates from -99.9999% to +99900%.
+        let mut last_nonzero = 0.0;
+        let mut sign_changes = 0;
+        for &value in v {
+            if value == 0.0 {
+                continue;
+            }
+            if last_nonzero != 0.0 && sign_differs(last_nonzero, value) {
+                sign_changes += 1;
+            }
+            last_nonzero = value;
+        }
+        if sign_changes == 1 {
+            return Ok(Self::find_single_root(v, last_nonzero));
+        }
+
+        // Multiple-root scan: x in [1e-6, 1e3] covers rates from -99.9999% to +99900%.
         const LO: f64 = 1e-6;
         const HI: f64 = 1e3;
         const STEPS: i32 = 512;
@@ -158,13 +173,53 @@ impl InternalRateReturn {
             s_lo = s_hi;
         }
 
-        // Closest to a zero rate, i.e. to x = 1. Returns `None` when no sign change was found.
-        Ok(roots.into_iter().min_by(|a, b| {
-            (a - 1.0)
-                .abs()
-                .partial_cmp(&(b - 1.0).abs())
-                .expect("root distances are finite")
-        }))
+        // x >= 1 corresponds to a nonnegative rate.
+        let has_nonnegative = roots.iter().any(|&x| x >= 1.0);
+        Ok(roots
+            .into_iter()
+            .filter(|&x| !has_nonnegative || x >= 1.0)
+            .min_by(|a, b| {
+                (a - 1.0)
+                    .abs()
+                    .partial_cmp(&(b - 1.0).abs())
+                    .expect("root distances are finite")
+            }))
+    }
+
+    /// With one coefficient sign change, the unique positive root lies between
+    /// opposite signs. The last nonzero coefficient determines the sign as x -> 0.
+    fn find_single_root(v: &[f64], last_nonzero: f64) -> Option<f64> {
+        let mut x = 1.0;
+        let mut f_x = Self::gx(v, x);
+        if f_x == 0.0 {
+            return Some(x);
+        }
+
+        let decreasing = sign_differs(f_x, last_nonzero);
+        loop {
+            let next = if decreasing {
+                x * 0.5
+            } else {
+                (x * 2.0).min(f64::MAX)
+            };
+            if next == 0.0 || next == x {
+                return None;
+            }
+
+            let f_next = Self::gx(v, next);
+            if f_next == 0.0 {
+                return Some(next);
+            }
+            if sign_differs(f_x, f_next) {
+                return Some(if decreasing {
+                    Self::bisect(v, next, f_next, x)
+                } else {
+                    Self::bisect(v, x, f_x, next)
+                });
+            }
+            x = next;
+            f_x = f_next;
+        }
     }
 
     /// Search inside a cell whose endpoints share a sign.
@@ -221,7 +276,7 @@ impl InternalRateReturn {
     /// Bisect a bracketed sign change down to the limit of `f64` resolution.
     fn bisect(v: &[f64], mut lo: f64, mut f_lo: f64, mut hi: f64) -> f64 {
         for _ in 0..200 {
-            let mid = 0.5 * (lo + hi);
+            let mid = lo + 0.5 * (hi - lo);
             // No representable point strictly between lo and hi.
             if mid <= lo || mid >= hi {
                 break;
@@ -237,7 +292,7 @@ impl InternalRateReturn {
                 f_lo = f_mid;
             }
         }
-        0.5 * (lo + hi)
+        lo + 0.5 * (hi - lo)
     }
 
     fn irr(&self) -> Result<Option<f64>> {
@@ -470,6 +525,40 @@ mod tests {
             "npv at irr {} is not zero",
             res
         )
+    }
+
+    #[test]
+    fn test_irr_single_root_outside_scan_range() {
+        for x in [1e-12, 1e-9, 1e4, 1e308] {
+            let root = InternalRateReturn::find_root(&[-1.0, x]).unwrap().unwrap();
+            assert!((root - x).abs() <= x * 1e-12, "root {root}, expected {x}");
+        }
+    }
+
+    #[test]
+    fn test_irr_single_sign_change_with_zeros() {
+        for values in [vec![0.0, -1.0, 1e-9, 0.0], vec![0.0, 1.0, -1e-9, 0.0]] {
+            let result = super::irr(&values).unwrap().unwrap();
+            assert!((result - (1e-9 - 1.0)).abs() <= f64::EPSILON);
+        }
+    }
+
+    #[test]
+    fn test_irr_selection_numpy_financial_1_1_0() {
+        let cases: &[(&[f64], f64)] = &[
+            (&[-1.0, 2.4, -1.35], 0.5),
+            (&[1.0, -3.6, 4.23, -1.62], 0.2),
+            (&[1.0, -1.3, 0.4], -0.2),
+            (&[1.0, -2.5, 1.5], 0.0),
+            (&[1.0, -1.5, 0.5], 0.0),
+        ];
+        for &(values, expected) in cases {
+            let actual = super::irr(values).unwrap().unwrap();
+            assert!(
+                (actual - expected).abs() < 1e-12,
+                "{values:?}: {actual}, expected {expected}"
+            );
+        }
     }
 
     /// Cases from the `numpy_financial` 1.0.0 docstring. The last two are non-conventional

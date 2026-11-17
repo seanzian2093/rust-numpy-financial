@@ -96,6 +96,7 @@ fn validate_values(values: &[f64]) -> Result<()> {
 ///
 /// ## Return:
 /// * the net present value
+/// * `NaN` if `rate` is exactly `-1.0`, matching `numpy_financial` 1.1.0
 ///
 /// # Errors
 /// Returns `ParaError` if `values` is empty
@@ -109,6 +110,10 @@ fn validate_values(values: &[f64]) -> Result<()> {
 /// ```
 pub fn npv(values: &[f64], rate: f64) -> Result<f64> {
     validate_values(values)?;
+    if rate == -1.0 {
+        return Ok(f64::NAN);
+    }
+
     let npv: f64 = values
         .iter()
         .enumerate()
@@ -200,6 +205,18 @@ mod tests {
             res,
             tgt
         );
+    }
+
+    #[test]
+    fn test_npv_negative_one_rate_edge_cases() {
+        for values in [&[100.0][..], &[-100.0, -50.0][..], &[0.0, 0.0][..]] {
+            assert!(super::npv(values, -1.0).unwrap().is_nan());
+        }
+    }
+
+    #[test]
+    fn test_npv_empty_values_at_negative_one_rate() {
+        assert!(matches!(super::npv(&[], -1.0), Err(Error::ParaError(_))));
     }
 
     #[test]
