@@ -11,11 +11,11 @@ I will treat upstream results as a compatibility reference, not as infallible ma
 
 ## 1. Establish the baseline
 
-1. I will review the current worktree and record the Rust commit and any local changes before starting.
-2. I will record the Python, NumPy, `numpy_financial`, and Rust toolchain versions used for each comparison.
-3. I will verify that the reference interpreter imports `numpy_financial` 1.1.0 from the intended virtual environment.
-4. I will run `cargo test` and record existing failures, warnings, and ignored tests separately from new findings.
-5. I will keep the current `1.4.1` patch-release scope separate from any future public API additions that may warrant a minor release.
+1. I reviewed the current worktree and record the Rust commit and any local changes before starting.
+2. I recorded the Python, NumPy, `numpy_financial`, and Rust toolchain versions used for each comparison.
+3. I verified that the reference interpreter imports `numpy_financial` 1.1.0 from the intended virtual environment.
+4. I ran `cargo test` and record existing failures, warnings, and ignored tests separately from new findings.
+5. I kept the current `1.4.1` patch-release scope separate from any future public API additions that may warrant a minor release.
 
 ## 2. Inventory and classify the cases
 

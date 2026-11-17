@@ -33,3 +33,6 @@ FIXES.md
 BENCHMARKING.md
 BUILDER_PATTERN.md
 IRR_SOLVER.md
+
+# Temporary Reference files
+tests/*.py
