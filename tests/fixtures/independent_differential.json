@@ -1,0 +1,290 @@
+[
+  {
+    "id": "irr-quadratic",
+    "source": "src/irr.rs::tests::test_irr_find_root",
+    "rationale": "-0.25*x^2 + 1 = 0 has its only positive root at x=2, hence rate=1.",
+    "input": {"function": "irr", "values": [-0.25, 0, 1]},
+    "expected": {"kind": "finite", "value": 1},
+    "rtol": 1e-10, "atol": 1e-8
+  },
+  {
+    "id": "irr-annuity-3",
+    "source": "examples/irr_robustness.rs::annuity",
+    "rationale": "Payment is constructed from principal and rate, making NPV zero at 8%.",
+    "input": {"function": "irr_annuity", "length": 3, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-annuity-4",
+    "source": "src/irr.rs::tests::test_irr_annuity_known_rate",
+    "rationale": "Known-rate annuity; payment is derived algebraically, not from NumPy.",
+    "input": {"function": "irr_annuity", "length": 4, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-annuity-7",
+    "source": "src/irr.rs::tests::test_irr_annuity_known_rate",
+    "rationale": "Known-rate annuity covering a historical root-finding boundary.",
+    "input": {"function": "irr_annuity", "length": 7, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-annuity-15",
+    "source": "src/irr.rs::tests::test_irr_annuity_known_rate",
+    "rationale": "Known-rate annuity covering a historical root-finding boundary.",
+    "input": {"function": "irr_annuity", "length": 15, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-annuity-16",
+    "source": "src/irr.rs::tests::test_irr_annuity_known_rate",
+    "rationale": "Known-rate annuity covering a historical panic boundary.",
+    "input": {"function": "irr_annuity", "length": 16, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-annuity-17",
+    "source": "src/irr.rs::tests::test_irr_annuity_known_rate",
+    "rationale": "Known-rate annuity covering a historical root-finding boundary.",
+    "input": {"function": "irr_annuity", "length": 17, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-annuity-64",
+    "source": "src/irr.rs::tests::test_irr_annuity_known_rate",
+    "rationale": "Known-rate annuity with a higher-degree cash-flow polynomial.",
+    "input": {"function": "irr_annuity", "length": 64, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-annuity-257",
+    "source": "src/irr.rs::tests::test_irr_annuity_known_rate",
+    "rationale": "Known-rate annuity testing long-input robustness.",
+    "input": {"function": "irr_annuity", "length": 257, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-annuity-1024",
+    "source": "src/irr.rs::tests::test_irr_annuity_known_rate",
+    "rationale": "Known-rate annuity testing long-input robustness.",
+    "input": {"function": "irr_annuity", "length": 1024, "principal": 10000, "rate": 0.08},
+    "expected": {"kind": "finite", "value": 0.08},
+    "rtol": 0, "atol": 1e-6
+  },
+  {
+    "id": "irr-loss-making",
+    "source": "examples/irr_robustness.rs::main",
+    "rationale": "The original requirement is rate > -1 and NPV=0, not a NumPy-derived rate.",
+    "input": {"function": "irr", "values": [-1000, 100, 100, 100]},
+    "expected": {"kind": "irr_root", "residual_atol": 1e-8},
+    "rtol": 1e-7, "atol": 1e-8
+  },
+  {
+    "id": "irr-root-x-1e-12",
+    "source": "src/irr.rs::tests::test_irr_single_root_outside_scan_range",
+    "rationale": "For [-1,x], the exact public rate is x-1; rate rounding cannot preserve relative accuracy in x.",
+    "input": {"function": "irr", "values": [-1, 1e-12]},
+    "expected": {"kind": "finite", "value": -0.999999999999},
+    "rtol": 0, "atol": 2.220446049250313e-16
+  },
+  {
+    "id": "irr-root-x-1e-9",
+    "source": "src/irr.rs::tests::test_irr_single_root_outside_scan_range",
+    "rationale": "For [-1,x], the exact public rate is x-1, below the old scan's lower bound.",
+    "input": {"function": "irr", "values": [-1, 1e-9]},
+    "expected": {"kind": "finite", "value": -0.999999999},
+    "rtol": 0, "atol": 2.220446049250313e-16
+  },
+  {
+    "id": "irr-root-x-1e4",
+    "source": "src/irr.rs::tests::test_irr_single_root_outside_scan_range",
+    "rationale": "For [-1,x], the exact rate is x-1, above the old scan's upper bound.",
+    "input": {"function": "irr", "values": [-1, 1e4]},
+    "expected": {"kind": "finite", "value": 9999},
+    "rtol": 1e-12, "atol": 0
+  },
+  {
+    "id": "irr-root-x-1e308",
+    "source": "src/irr.rs::tests::test_irr_single_root_outside_scan_range",
+    "rationale": "A finite very large root exercises bracketing and floating-point report serialization.",
+    "input": {"function": "irr", "values": [-1, 1e308]},
+    "expected": {"kind": "finite", "value": 1e308},
+    "rtol": 1e-12, "atol": 0
+  },
+  {
+    "id": "irr-leading-trailing-zeros",
+    "source": "src/irr.rs::tests::test_irr_single_sign_change_with_zeros",
+    "rationale": "Leading/trailing zeros leave the sole positive nonzero root x=1e-9 unchanged.",
+    "input": {"function": "irr", "values": [0, -1, 1e-9, 0]},
+    "expected": {"kind": "finite", "value": -0.999999999},
+    "rtol": 0, "atol": 2.220446049250313e-16
+  },
+  {
+    "id": "irr-sign-reversed-zeros",
+    "source": "src/irr.rs::tests::test_irr_single_sign_change_with_zeros",
+    "rationale": "Reversing every sign does not change any polynomial root.",
+    "input": {"function": "irr", "values": [0, 1, -1e-9, 0]},
+    "expected": {"kind": "finite", "value": -0.999999999},
+    "rtol": 0, "atol": 2.220446049250313e-16
+  },
+  {
+    "id": "irr-selection-mixed",
+    "source": "src/irr.rs::tests::test_irr_selection_numpy_financial_1_1_0",
+    "rationale": "Analytic rates are -0.1 and 0.5; the documented compatibility policy prefers nonnegative rates.",
+    "input": {"function": "irr", "values": [-1, 2.4, -1.35]},
+    "expected": {"kind": "finite", "value": 0.5},
+    "rtol": 0, "atol": 1e-7
+  },
+  {
+    "id": "irr-selection-three-roots",
+    "source": "src/irr.rs::tests::test_irr_selection_numpy_financial_1_1_0",
+    "rationale": "Analytic rates are -0.1, 0.2 and 0.5; the policy selects the nonnegative rate closest to zero.",
+    "input": {"function": "irr", "values": [1, -3.6, 4.23, -1.62]},
+    "expected": {"kind": "finite", "value": 0.2},
+    "rtol": 0, "atol": 1e-7
+  },
+  {
+    "id": "irr-selection-negative-only",
+    "source": "src/irr.rs::tests::test_irr_selection_numpy_financial_1_1_0",
+    "rationale": "Analytic rates are -0.5 and -0.2; with no nonnegative rate, select the closest to zero.",
+    "input": {"function": "irr", "values": [1, -1.3, 0.4]},
+    "expected": {"kind": "finite", "value": -0.2},
+    "rtol": 0, "atol": 1e-7
+  },
+  {
+    "id": "irr-selection-zero-positive",
+    "source": "src/irr.rs::tests::test_irr_selection_numpy_financial_1_1_0",
+    "rationale": "Analytic rates are 0 and 0.5, so zero is selected.",
+    "input": {"function": "irr", "values": [1, -2.5, 1.5]},
+    "expected": {"kind": "finite", "value": 0},
+    "rtol": 0, "atol": 1e-7
+  },
+  {
+    "id": "irr-selection-zero-negative",
+    "source": "src/irr.rs::tests::test_irr_selection_numpy_financial_1_1_0",
+    "rationale": "Analytic rates are -0.5 and 0, so zero is selected.",
+    "input": {"function": "irr", "values": [1, -1.5, 0.5]},
+    "expected": {"kind": "finite", "value": 0},
+    "rtol": 0, "atol": 1e-7
+  },
+  {
+    "id": "npv-zero-rate",
+    "source": "src/npv.rs::tests::test_npv_zero_rate",
+    "rationale": "With no discounting, NPV is the arithmetic sum of the cash flows.",
+    "input": {"function": "npv", "rate": 0, "values": [-15000, 1500, 2500, 3500, 4500, 6000]},
+    "expected": {"kind": "finite", "value": 3000},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "fv-zero-rate",
+    "source": "src/fv.rs::tests::test_fv_zero_rate",
+    "rationale": "At zero interest, future value is -(pv + pmt*nper).",
+    "input": {"function": "fv", "rate": 0, "nper": 20, "pmt": -100, "pv": 0, "when": "end"},
+    "expected": {"kind": "finite", "value": 2000},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "pv-zero-rate",
+    "source": "src/pv.rs::tests::test_pv_zero_rate",
+    "rationale": "At zero interest, present value is -(fv + pmt*nper).",
+    "input": {"function": "pv", "rate": 0, "nper": 20, "pmt": 12000, "fv": 0, "when": "end"},
+    "expected": {"kind": "finite", "value": -240000},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "pmt-zero-interest-identity",
+    "source": "independent analytic extension: zero-interest balance equation",
+    "rationale": "Four equal payments settle pv=100 and fv=20: -(100+20)/4=-30.",
+    "input": {"function": "pmt", "rate": 0, "nper": 4, "pv": 100, "fv": 20, "when": "begin"},
+    "expected": {"kind": "finite", "value": -30},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "ppmt-zero-interest-identity",
+    "source": "independent analytic extension: zero-interest principal amortization",
+    "rationale": "At zero interest, each of four payments repays 100/4 of principal.",
+    "input": {"function": "ppmt", "rate": 0, "per": 2, "nper": 4, "pv": 100, "fv": 0, "when": "end"},
+    "expected": {"kind": "finite", "value": -25},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "rate-compound-identity",
+    "source": "independent analytic extension: two-period compound growth",
+    "rationale": "64*(1+r)^2=100 has its positive rate at 0.25; the positive starting guess targets that root.",
+    "input": {"function": "rate", "nper": 2, "pmt": 0, "pv": -64, "fv": 100, "when": "end", "guess": 0.1, "tol": 1e-12, "maxiter": 100},
+    "expected": {"kind": "finite", "value": 0.25},
+    "rtol": 0, "atol": 1e-10
+  },
+  {
+    "id": "nper-no-finite-payment-count",
+    "source": "src/nper.rs::tests::test_nper_zero_rate_zero_pmt",
+    "rationale": "No payments and zero interest cannot reach a nonzero future balance; preserve the repository's +infinity convention.",
+    "input": {"function": "nper", "rate": 0, "pmt": 0, "pv": 0, "fv": 100000, "when": "end"},
+    "expected": {"kind": "positive_infinity"},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "nper-invalid-log-domain",
+    "source": "src/nper.rs::tests::test_nper_lt_negative_one_rate",
+    "rationale": "The original Rust assertion expected None. After compatibility review, this invalid logarithm domain returns Some(NaN), matching NumPy Financial 1.1.0.",
+    "input": {"function": "nper", "rate": -10, "pmt": 0, "pv": 0, "fv": 100000, "when": "end"},
+    "expected": {"kind": "nan"},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "fv-overflow",
+    "source": "src/fv.rs::tests::test_fv_nan",
+    "rationale": "Preserve the existing IEEE-754 overflow diagnostic, not a claim about a finite mathematical answer.",
+    "input": {"function": "fv", "rate": -1.7976931348623157e308, "nper": 100, "pmt": -2000, "pv": 0, "when": "end"},
+    "expected": {"kind": "nan"},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "nper-overflow",
+    "source": "src/nper.rs::tests::test_nper_nan",
+    "rationale": "Despite the historical test name, its original assertion is is_infinite(), with a positive result.",
+    "input": {"function": "nper", "rate": 1.7976931348623157e308, "pmt": -2000, "pv": 0, "fv": 100000, "when": "end"},
+    "expected": {"kind": "positive_infinity"},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "ipmt-overflow",
+    "source": "src/ipmt.rs::tests::test_ipmt_nan",
+    "rationale": "Preserve the original overflow diagnostic for the maximum u32 payment count.",
+    "input": {"function": "ipmt", "rate": 0.008333333333333333, "per": 1, "nper": 4294967295, "pv": 2000, "fv": 0, "when": "end"},
+    "expected": {"kind": "nan"},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "mirr-overflow",
+    "source": "src/mirr.rs::tests::test_mirr_nan",
+    "rationale": "Despite the historical test name, its original assertion is is_infinite(), with a positive result.",
+    "input": {"function": "mirr", "values": [100, 200, -50, 300, -200], "finance_rate": 1.7976931348623157e308, "reinvest_rate": 1.7976931348623157e308},
+    "expected": {"kind": "positive_infinity"},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "irr-too-short",
+    "source": "examples/irr_robustness.rs::main",
+    "rationale": "The original Rust behavior rejected a one-element series. After compatibility review, a constant cash-flow polynomial returns Some(NaN), matching NumPy Financial 1.1.0.",
+    "input": {"function": "irr", "values": [-100]},
+    "expected": {"kind": "nan"},
+    "rtol": 0, "atol": 0
+  },
+  {
+    "id": "npv-empty-validation",
+    "source": "src/npv.rs::tests::test_npv_empty_values_at_negative_one_rate",
+    "rationale": "The original Rust assertion expected a validation error. After compatibility review, an empty sum returns zero even at rate=-1, matching NumPy Financial 1.1.0.",
+    "input": {"function": "npv", "rate": -1, "values": []},
+    "expected": {"kind": "finite", "value": 0},
+    "rtol": 0, "atol": 0
+  }
+]

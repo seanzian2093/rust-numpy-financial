@@ -31,11 +31,8 @@ pub struct NetPresentValue {
 
 impl NetPresentValue {
     /// Instantiate a `NetPresentValue` instance from a vec of (`values`, `rate`) in said order
-    ///
-    /// # Errors
-    /// Returns `ParaError` if `values` is empty
+    /// Empty cash flows are accepted and have a net present value of zero.
     pub fn from_tuple(tup: (Vec<f64>, f64)) -> Result<Self> {
-        validate_values(&tup.0)?;
         Ok(NetPresentValue {
             values: tup.0,
             rate: tup.1,
@@ -46,7 +43,7 @@ impl NetPresentValue {
     /// Since [`HashMap`] requires values of same type, we need to wrap into a variant of enum
     ///
     /// # Errors
-    /// Returns error if map extraction or validation fails
+    /// Returns error if map extraction fails
     pub fn from_map(map: ParaMap) -> Result<Self> {
         let op = |err: Error| {
             Error::OtherError(format!(
@@ -57,7 +54,6 @@ impl NetPresentValue {
         let values = get_vecf64(&map, "values").map_err(op)?;
         let rate = get_f64(&map, "rate").map_err(op)?;
         Self::from_tuple((values, rate))
-            .map_err(|e| Error::OtherError(format!("NPV validation failed: {}", e)))
     }
 
     fn npv(&self) -> Result<f64> {
@@ -81,14 +77,6 @@ impl FromMap for NetPresentValue {
     }
 }
 
-/// Validate that `values` is not empty
-fn validate_values(values: &[f64]) -> Result<()> {
-    if values.is_empty() {
-        return Err(Error::ParaError("values must not be empty".to_string()));
-    }
-    Ok(())
-}
-
 /// Compute the net present value of a cash flow, given an interest rate
 /// ## Parameters
 /// * `values`: a cash flow, assume first payment is made at present, i.e. `t=0` the begining of 1st period
@@ -96,10 +84,9 @@ fn validate_values(values: &[f64]) -> Result<()> {
 ///
 /// ## Return:
 /// * the net present value
-/// * `NaN` if `rate` is exactly `-1.0`, matching `numpy_financial` 1.1.0
-///
-/// # Errors
-/// Returns `ParaError` if `values` is empty
+/// * `0.0` if `values` is empty, regardless of `rate`
+/// * `NaN` for non-empty cash flows if `rate` is exactly `-1.0`,
+///   matching `numpy_financial` 1.1.0
 ///
 /// ## Example
 /// ```rust
@@ -109,7 +96,9 @@ fn validate_values(values: &[f64]) -> Result<()> {
 /// println!("npv is {:?}", result);
 /// ```
 pub fn npv(values: &[f64], rate: f64) -> Result<f64> {
-    validate_values(values)?;
+    if values.is_empty() {
+        return Ok(0.0);
+    }
     if rate == -1.0 {
         return Ok(f64::NAN);
     }
@@ -216,7 +205,20 @@ mod tests {
 
     #[test]
     fn test_npv_empty_values_at_negative_one_rate() {
-        assert!(matches!(super::npv(&[], -1.0), Err(Error::ParaError(_))));
+        for rate in [-1.0, 0.0, 0.05, f64::NAN, f64::INFINITY] {
+            assert_eq!(super::npv(&[], rate).unwrap(), 0.0);
+            assert_eq!(
+                NetPresentValue::from_tuple((vec![], rate))
+                    .unwrap()
+                    .get()
+                    .unwrap(),
+                0.0
+            );
+            let mut map = ParaMap::new();
+            map.insert("values".into(), ParaType::VecF64(vec![]));
+            map.insert("rate".into(), ParaType::F64(rate));
+            assert_eq!(NetPresentValue::from_map(map).unwrap().get().unwrap(), 0.0);
+        }
     }
 
     #[test]

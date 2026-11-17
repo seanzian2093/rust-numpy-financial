@@ -143,6 +143,15 @@ fn main() {
 - Amortization schedule generation
 - Default parameter support for optional fields
 
+## Testing
+
+`cargo test` runs the Rust tests, including the Upstream Compatibility Suite
+and independent expectations, without requiring Python.
+
+The [Independent Differential Suite](docs/npf-1.1.0/INDEPENDENT_DIFFERENTIAL.md)
+also compares shared cases with `numpy_financial` 1.1.0 and produces a detailed
+JSON report.
+
 ## Contributing
 
 We welcome contributions! To get involved:

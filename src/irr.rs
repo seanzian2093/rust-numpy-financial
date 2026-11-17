@@ -38,8 +38,10 @@ impl InternalRateReturn {
     ///
     /// # Errors
     /// Returns `ParaError` if:
-    /// - `values` has fewer than 2 elements
-    /// - `values` contains only positive or only negative values (IRR requires both)
+    /// - `values` is empty
+    /// - `values` has multiple elements but lacks positive or negative values
+    ///
+    /// A one-element series is accepted; `get()` returns `Ok(Some(NaN))`.
     pub fn from_vec(values: Vec<f64>) -> Result<Self> {
         validate_values(&values)?;
         Ok(InternalRateReturn { values })
@@ -322,12 +324,13 @@ fn sign_differs(a: f64, b: f64) -> bool {
     (a < 0.0) != (b < 0.0)
 }
 
-/// Validate that `values` has at least 2 elements and contains both positive and negative values
+/// Reject empty series and require both signs for multi-element series.
 fn validate_values(values: &[f64]) -> Result<()> {
-    if values.len() < 2 {
-        return Err(Error::ParaError(
-            "values must contain at least 2 elements".to_string(),
-        ));
+    if values.is_empty() {
+        return Err(Error::ParaError("values must not be empty".to_string()));
+    }
+    if values.len() == 1 {
+        return Ok(());
     }
 
     let has_positive = values.iter().any(|&v| v > 0.0);
@@ -353,9 +356,10 @@ fn validate_values(values: &[f64]) -> Result<()> {
 ///
 /// # Errors
 /// Returns `ParaError` if:
-/// - `values` has fewer than 2 elements
-/// - `values` contains only positive or only negative values (IRR requires both)
+/// - `values` is empty
+/// - `values` has multiple elements but lacks positive or negative values
 ///
+/// Returns `Ok(Some(NaN))` for a one-element series, matching `numpy_financial` 1.1.0.
 /// Returns `Ok(None)` if no internal rate of return exists for `values`.
 ///
 /// ## Example
@@ -367,6 +371,9 @@ fn validate_values(values: &[f64]) -> Result<()> {
 /// ```
 pub fn irr(values: &[f64]) -> Result<Option<f64>> {
     validate_values(values)?;
+    if values.len() == 1 {
+        return Ok(Some(f64::NAN));
+    }
     Ok(InternalRateReturn::find_root(values)?.map(|x| x - 1.0))
 }
 
@@ -477,6 +484,36 @@ mod tests {
             res,
             tgt
         )
+    }
+
+    #[test]
+    fn test_irr_single_cash_flow_returns_nan() {
+        for value in [-100.0, 100.0, 0.0] {
+            assert!(super::irr(&[value]).unwrap().unwrap().is_nan());
+            assert!(
+                InternalRateReturn::from_vec(vec![value])
+                    .unwrap()
+                    .get()
+                    .unwrap()
+                    .unwrap()
+                    .is_nan()
+            );
+            let mut map = ParaMap::new();
+            map.insert("values".into(), ParaType::VecF64(vec![value]));
+            assert!(
+                InternalRateReturn::from_map(map)
+                    .unwrap()
+                    .get()
+                    .unwrap()
+                    .unwrap()
+                    .is_nan()
+            );
+        }
+        assert!(matches!(super::irr(&[]), Err(Error::ParaError(_))));
+        assert!(matches!(
+            super::irr(&[100.0, 200.0]),
+            Err(Error::ParaError(_))
+        ));
     }
 
     #[test]

@@ -58,7 +58,7 @@ fn main() {
     );
     assert!(r > -1.0);
 
-    // Validation errors are reported, not panicked.
+    // Same-sign series return an error; a one-element series returns Some(NaN).
     println!("\nall-positive: {:?}", irr(&[100.0, 200.0]));
     println!("too short:    {:?}", irr(&[-100.0]));
 }

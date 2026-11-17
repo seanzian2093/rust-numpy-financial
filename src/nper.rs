@@ -8,7 +8,7 @@ use crate::{Error, FromMap, FromTuple, ParaMap, Result, WhenType, get_f64, get_w
 /// * `when` : when payments are due [`WhenType`]. Defaults to `When::End`
 ///
 /// ## Return:
-/// * `nper`: the number of periodic payments or `None`
+/// * `nper`: the number of periodic payments, or `Some(NaN)` for rates at or below `-1`
 ///
 /// ## Example
 /// Struct-based:
@@ -99,7 +99,8 @@ impl FromMap for NumberPeriod {
 /// * `when` : when payments are due [`WhenType`]
 ///
 /// ## Return:
-/// * the number of periodic payments or `None`
+/// * the number of periodic payments, or `Some(NaN)` for rates at or below `-1`,
+///   matching `numpy_financial` 1.1.0
 ///
 /// ## Example
 /// ```rust
@@ -123,7 +124,7 @@ pub fn nper(rate: f64, pmt: f64, pv: f64, fv: f64, when: WhenType) -> Result<Opt
     }
 
     if rate <= -1.0 {
-        return Ok(None);
+        return Ok(Some(f64::NAN));
     }
 
     // We know that rate != 0, we don't need to check for division by 0
@@ -234,11 +235,32 @@ mod tests {
 
     #[test]
     fn test_nper_lt_negative_one_rate() {
-        let nper = NumberPeriod::from_tuple((-10.0, 0.0, 0.0, 100000.0, WhenType::End)).unwrap();
-        let res = nper.get().unwrap();
-        let tgt = None;
-
-        assert_eq!(res, tgt, "{:#?} v.s. {:#?}", res, tgt);
+        for rate in [-10.0, -1.0] {
+            for when in [WhenType::End, WhenType::Begin] {
+                assert!(
+                    super::nper(rate, 0.0, 0.0, 100000.0, when)
+                        .unwrap()
+                        .unwrap()
+                        .is_nan()
+                );
+                let nper = NumberPeriod::from_tuple((rate, 0.0, 0.0, 100000.0, when)).unwrap();
+                assert!(nper.get().unwrap().unwrap().is_nan());
+                let mut map = ParaMap::new();
+                map.insert("rate".into(), ParaType::F64(rate));
+                map.insert("pmt".into(), ParaType::F64(0.0));
+                map.insert("pv".into(), ParaType::F64(0.0));
+                map.insert("fv".into(), ParaType::F64(100000.0));
+                map.insert("when".into(), ParaType::When(when));
+                assert!(
+                    NumberPeriod::from_map(map)
+                        .unwrap()
+                        .get()
+                        .unwrap()
+                        .unwrap()
+                        .is_nan()
+                );
+            }
+        }
     }
 
     #[test]
