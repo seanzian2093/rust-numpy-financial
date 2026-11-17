@@ -446,7 +446,7 @@ mod tests {
             let payment = principal * rate / (1.0 - (1.0 + rate).powf(-n));
 
             let mut values = vec![-principal];
-            values.extend(std::iter::repeat(payment).take(len - 1));
+            values.extend(std::iter::repeat_n(payment, len - 1));
 
             let res = super::irr(&values).unwrap().unwrap();
             assert!(

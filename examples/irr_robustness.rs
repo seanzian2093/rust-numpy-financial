@@ -8,7 +8,7 @@ fn annuity(len: usize, rate: f64) -> Vec<f64> {
     let n = (len - 1) as f64;
     let payment = PRINCIPAL * rate / (1.0 - (1.0 + rate).powf(-n));
     let mut values = vec![-PRINCIPAL];
-    values.extend(std::iter::repeat(payment).take(len - 1));
+    values.extend(std::iter::repeat_n(payment, len - 1));
     values
 }
 
