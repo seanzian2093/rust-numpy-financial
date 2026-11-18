@@ -29,7 +29,7 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rfinancial = "1.3"
+rfinancial = "1.4.1"
 ```
 
 ### Struct-based API (Recommended for complex use cases)
@@ -89,15 +89,6 @@ println!("Interest portion: {:?}", result.get()?);
 
 See `examples`
 
-## Backward Compatibility
-
-All original APIs remain functional:
-
-- `Struct::from_tuple()` - Constructor from tuples
-- `Struct::from_map()` - Constructor from HashMap
-- `function_name()` - Direct function calls
-- Builder pattern is purely additive
-
 ## Logging
 
 Enable debug logging with `env_logger`:
@@ -123,21 +114,6 @@ fn main() {
 }
 ```
 
-## Modules
-
-### Core Financial Functions
-
-- **fv** - Future value
-- **pv** - Present value
-- **pmt** - Payment against loan principal plus interest
-- **nper** - Number of periodic payments
-- **rate** - Interest rate per period
-- **ipmt** - Interest portion of a payment
-- **ppmt** - Principal portion of a payment
-- **irr** - Internal rate of return
-- **mirr** - Modified internal rate of return
-- **npv** - Net present value of cash flows
-
 ## Planned Additions
 
 - Amortization schedule generation
@@ -145,10 +121,10 @@ fn main() {
 
 ## Testing
 
-`cargo test` runs the Rust tests, including the Upstream Compatibility Suite
+- `cargo test` runs the Rust tests, including the Upstream Compatibility Suite
 and independent expectations, without requiring Python.
 
-The [Independent Differential Suite](docs/npf-1.1.0/INDEPENDENT_DIFFERENTIAL.md)
+- The [Independent Differential Suite](docs/npf-1.1.0/INDEPENDENT_DIFFERENTIAL.md)
 also compares shared cases with `numpy_financial` 1.1.0 and produces a detailed
 JSON report.
 
@@ -159,6 +135,10 @@ We welcome contributions! To get involved:
 1. Use the crate and provide feedback
 2. Report issues or suggest improvements
 3. Submit pull requests via GitHub
+
+## Change Log
+
+See [Change Log](CHANGELOG.md)
 
 ## License
 
