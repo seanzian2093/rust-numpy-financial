@@ -47,6 +47,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#![allow(clippy::excessive_precision)]
 use rfinancial::{Error, WhenType};
 
 const RTOL: f64 = 1e-7;
